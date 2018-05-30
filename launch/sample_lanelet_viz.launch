@@ -1,0 +1,24 @@
+<launch>
+
+  <!-- Define a rosparameter for the map filename -->
+  <param name="/lanelet_map_filename" value="$(find sim_lanelet)/res/osm/figure8.osm"/>
+
+  <!-- Define point instead of comma as decimal seperator -->
+  <env name="LC_NUMERIC"
+            value="en_US.UTF-8"/>
+
+<!-- Publish the NavSatFix -->
+<node pkg="rostopic" type="rostopic" name="NavSatFixPublisher" args="pub -l
+/nav_sat_fix_topic
+sensor_msgs/NavSatFix
+'{'\
+'header: {seq: 0, stamp: 0, frame_id: 'map'}, '\
+'latitude: 49.0228 ,'\
+'longitude: 8.431 ,'\
+'}'" output="screen">
+</node>
+
+  <!-- start rviz -->
+  <node pkg="rviz" type="rviz" name="my_rviz" args="-d $(find lanelet_rviz_plugin_ros)/launch/sample_lanelet_viz.rviz" output="screen" />
+
+</launch>

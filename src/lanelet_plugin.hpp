@@ -1,45 +1,54 @@
+/*
+ * Copyright (c) 2017
+ * FZI Forschungszentrum Informatik, Karlsruhe, Germany (www.fzi.de)
+ * KIT, Institute of Measurement and Control, Karlsruhe, Germany (www.mrt.kit.edu)
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #pragma once
 
-// ROS
-#include <ros/ros.h>
-
-// ROS-Geodesy
-#include <geodesy/utm.h>
-#include <geographic_msgs/GeoPoint.h>
-
-// TF2
-#include <tf2_ros/transform_listener.h>
-
-// RVIZ
-#include <rviz/display.h>
-#include <rviz/display_context.h>
-#include <rviz/frame_manager.h>
-#include <rviz/properties/bool_property.h>
-#include <rviz/properties/float_property.h>
-#include <rviz/properties/string_property.h>
-
-// Ogre
-#include <OGRE/OgreSceneManager.h>
-#include <OGRE/OgreSceneNode.h>
-
-// Boost
 #include <boost/filesystem.hpp>
 #include <boost/exception/all.hpp>
 
-// Map Element
+#include <OGRE/OgreSceneManager.h>
+#include <OGRE/OgreSceneNode.h>
+#include <ros/ros.h>
+#include <rviz/display.h>
+#include <rviz/display_context.h>
+#include <rviz/frame_manager.h>
+#include <tf2_ros/transform_listener.h>
+#include <rviz/properties/bool_property.h>
+#include <rviz/properties/float_property.h>
+#include <rviz/properties/string_property.h>
+#include <rviz/properties/ros_topic_property.h>
+
+#include <util_geo_coordinates_ros/util_geo_coordinates_ros.hpp>
+
 #include "map_element.hpp"
 
-namespace geodesy {
-struct utmOffset {
-    double altitude; // in meters
-    double easting;  // in meters
-    double northing; // in meters;
-};
-void fromMsgWithOffset(const geographic_msgs::GeoPoint& from,
-                       const geodesy::utmOffset& offset,
-                       geodesy::UTMPoint& to,
-                       bool normalize = true);
-} // end of namespace geodesy
 
 namespace lanelet_rviz_plugin_ros {
 
@@ -72,8 +81,8 @@ private:
     bool checkMapFile();
     void resolveParameters(std::string& str);
     void resolveMapFile();
-    double resolveDoubleParameters(std::string str);
-    bool updateFrames();
+    void resolveNavSatFixTopic();
+    void createGeoCoordinateTransform();
     bool checkEnvVariables();
 
     // tf2-listener
@@ -82,16 +91,17 @@ private:
 
     // map
     std::string mapFileName_;
-    std::string referenceFrame_;
-    geographic_msgs::GeoPoint referenceFrameOrigin_;
-    geodesy::UTMPoint fixedFrameOrigin_;
+    std::string navSatFixTopic_;
+
+    std::string originFrameId_;
+    LatLonOrigin latLonOrigin_;
     std::unique_ptr<MapElement> mapElement_;
+    std::shared_ptr<util_geo_coordinates::CoordinateTransformRos> coordinateTransformPtr_;
 
     // RVIZ-properties
     rviz::StringProperty mapFileProperty_;
-    rviz::StringProperty referenceFrameProperty_;
-    rviz::StringProperty referenceFrameLatProperty_;
-    rviz::StringProperty referenceFrameLonProperty_;
+    rviz::RosTopicProperty navSatFixTopicProperty_;
+
     rviz::BoolProperty mapVisibilityProperty_;
     rviz::BoolProperty idVisibilityProperty_;
     rviz::BoolProperty seperatorVisibilityProperty_;

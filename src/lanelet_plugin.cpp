@@ -1,45 +1,69 @@
+/*
+ * Copyright (c) 2017
+ * FZI Forschungszentrum Informatik, Karlsruhe, Germany (www.fzi.de)
+ * KIT, Institute of Measurement and Control, Karlsruhe, Germany (www.mrt.kit.edu)
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "lanelet_plugin.hpp"
 
-namespace geodesy {
-void fromMsgWithOffset(const geographic_msgs::GeoPoint& from,
-                       const geodesy::utmOffset& offset,
-                       geodesy::UTMPoint& to,
-                       bool normalize) {
-    // convert from geographic_msgs::GeoPoint (LatLonAlt) to geodesy::UTMPoint
-    // (UTM)
-    geodesy::fromMsg(from, to);
-    // add offset
-    to.altitude = to.altitude + offset.altitude;
-    to.easting = to.easting + offset.easting;
-    to.northing = to.northing + offset.northing;
+#include <sensor_msgs/NavSatFix.h>
 
-    // normalize if canonical grid zone changed due to offset
-    if (normalize) {
-        auto zone = to.zone;
-        auto band = to.band;
-        geodesy::normalize(to);
-        if (to.zone != zone || to.band != band) {
-            ROS_INFO("geodesy::fromMsgWithOffset: UTM grid zone changed after adding "
-                     "offset and normalization.");
-        }
-    } else {
-        // warn if point is not in the canoncial grid-zone anymore
-        geodesy::UTMPoint normalized(to);
-        geodesy::normalize(normalized);
-        if (to.zone != normalized.zone || to.band != normalized.band) {
-            ROS_WARN("geodesy::fromMsgWithOffset: Point is not in canonical UTM grid "
-                     "zone. Current grid zone: %i %c , "
-                     "canonical grid zone: %i %c. Normalization is disabled. This may "
-                     "lead to inaccuracy and strange "
-                     "behavior.",
-                     to.zone,
-                     to.band,
-                     normalized.zone,
-                     normalized.band);
-        }
-    }
+namespace {
+
+Ogre::SceneNode* getChildSceneNodeAtFrameId(const tf2_ros::Buffer& tf_buffer,
+                                            rviz::DisplayContext* context,
+                                            Ogre::SceneNode* scene_node,
+                                            std::string frame_id) {
+    /**
+     * Get transform
+     */
+    Ogre::Quaternion orientation;
+    Ogre::Vector3 position;
+
+    geometry_msgs::TransformStamped transform = tf_buffer.lookupTransform(
+        context->getFrameManager()->getFixedFrame(), frame_id, ros::Time(0), ros::Duration(10.0));
+
+    orientation.x = transform.transform.rotation.x;
+    orientation.y = transform.transform.rotation.y;
+    orientation.z = transform.transform.rotation.z;
+    orientation.w = transform.transform.rotation.w;
+
+    position.x = transform.transform.translation.x;
+    position.y = transform.transform.translation.y;
+    position.z = transform.transform.translation.z;
+
+    Ogre::SceneNode* child_scene_node = scene_node->createChildSceneNode(position, orientation);
+
+    return child_scene_node;
 }
-} // end of namespace geodesy
+
+
+} // end of anonymous namespace
+
 
 namespace lanelet_rviz_plugin_ros {
 
@@ -52,33 +76,12 @@ LaneletMapPlugin::LaneletMapPlugin()
                            this,
                            SLOT(mapFileChanged()),
                            this),
-          referenceFrameProperty_("Reference Frame",
+          navSatFixTopicProperty_("NavSatFix Topic",
                                   "",
-                                  "The Reference Frame. LatLong-coordinates "
-                                  "(WGS84) must be provided. Ros parameters "
-                                  "are allowed (${myparam}).",
+                                  "",
+                                  "Describes the frame_id with origin (x=0,y=0,z=0) at the given lat/lon coordinates",
                                   this,
-                                  SLOT(referenceFrameChanged()),
-                                  this),
-          referenceFrameLatProperty_("Reference Frame Latitude",
-                                     "",
-                                     "The Latitude  of the Reference Frame Origin (WGS84). Either use a "
-                                     "Ros parameter "
-                                     "(everything except the first given Parameter in the format "
-                                     "${myparam} will be "
-                                     "ignored), or give the coordinate as decimal value.",
-                                     this,
-                                     SLOT(referenceFrameChanged()),
-                                     this),
-          referenceFrameLonProperty_("Reference Frame Longitude",
-                                     "",
-                                     "The Longitude  of the Reference Frame Origin (WGS84). Either use a "
-                                     "Ros parameter "
-                                     "(everything except the first given Parameter in the format "
-                                     "${myparam} will be "
-                                     "ignored), or give the coordinate as decimal value.",
-                                     this,
-                                     SLOT(referenceFrameChanged())),
+                                  SLOT(referenceFrameChanged())),
           mapVisibilityProperty_("Visibility of Map", true, "", this, SLOT(visibilityPropertyChanged()), this),
           idVisibilityProperty_(
               "Visibility of LaneletIds", true, "", &mapVisibilityProperty_, SLOT(visibilityPropertyChanged()), this),
@@ -112,6 +115,10 @@ LaneletMapPlugin::LaneletMapPlugin()
                                  &mapVisibilityProperty_,
                                  SLOT(lineWidthChanged()),
                                  this) {
+
+    QString message_type = QString::fromStdString(ros::message_traits::datatype<sensor_msgs::NavSatFix>());
+    navSatFixTopicProperty_.setMessageType(message_type);
+    navSatFixTopicProperty_.setDescription(message_type + " topic to subscribe to.");
 }
 
 LaneletMapPlugin::~LaneletMapPlugin() {
@@ -148,11 +155,17 @@ void LaneletMapPlugin::clear() {
 void LaneletMapPlugin::fixedFrameChanged() {
     // Call Base Class method
     Display::fixedFrameChanged();
+    clear();
+    loadMap();
 }
 
 void LaneletMapPlugin::loadMap() {
-    // (re)load Map
-    if (updateFrames() && checkEnvVariables() && checkMapFile()) {
+    if (!isEnabled()) {
+        // do not load map if plugin is not enabled
+        return;
+    }
+    if (checkEnvVariables() && checkMapFile()) {
+        // (re)load Map
         createMapObject();
     }
 }
@@ -161,16 +174,40 @@ void LaneletMapPlugin::loadMap() {
  * Load Map and and attach visible Map-Object to the scene_node.
  */
 void LaneletMapPlugin::createMapObject() {
+
+    if (!coordinateTransformPtr_) {
+        setStatus(rviz::StatusProperty::Error,
+                  "Transform",
+                  "Coordinate transformation not available, cannot create map object!");
+        return;
+    } else {
+        setStatus(rviz::StatusProperty::Ok,
+                  "Transform",
+                  QString("Transform ok, originFrameId_=") + QString::fromStdString(originFrameId_));
+    }
+
     // try to load map and create map object
     try {
+        Ogre::SceneNode* scene_node_origin_frame;
+        scene_node_origin_frame = getChildSceneNodeAtFrameId(tfBuffer_, context_, scene_node_, originFrameId_);
+
+
         // create Map Element. It is attached to the scene_node on creation
         mapElement_ = std::make_unique<MapElement>(scene_manager_,
-                                                   scene_node_,
+                                                   scene_node_origin_frame,
                                                    mapFileName_,
-                                                   fixedFrameOrigin_,
+                                                   coordinateTransformPtr_,
+                                                   latLonOrigin_,
                                                    static_cast<double>(laneletWidthProperty_.getFloat()),
                                                    static_cast<double>(seperatorWidthProperty_.getFloat()),
                                                    static_cast<double>(stopLineWidthProperty_.getFloat()));
+
+        Ogre::Vector3 origin = scene_node_origin_frame->convertLocalToWorldPosition(Ogre::Vector3{0., 0., 0.});
+        ROS_DEBUG("RVIZ:lanelet_plugin: Map loaded. Origin frame (\"%s\")is at x=%f, y=%f in the fixed frame",
+                  originFrameId_.c_str(),
+                  origin.x,
+                  origin.y);
+
     } catch (std::exception& e) {
         setStatus(rviz::StatusProperty::Error, QString("Map"), QString("Error during map creation: ") + e.what());
         return;
@@ -178,17 +215,9 @@ void LaneletMapPlugin::createMapObject() {
     // Set Visibility for individual Map Elements
     visibilityPropertyChanged();
 
-    ROS_INFO("RVIZ:lanelet_plugin: Map loaded. Reference Frame Origin: lat: %.12f "
-             "lon: %.12f ; Set Fixed Frame "
-             "Origin: UTM "
-             "grid zone: %i%c easting: %.12f northing: %.12f",
-             referenceFrameOrigin_.latitude,
-             referenceFrameOrigin_.longitude,
-             fixedFrameOrigin_.zone,
-             fixedFrameOrigin_.band,
-             fixedFrameOrigin_.easting,
-             fixedFrameOrigin_.northing);
     setStatus(rviz::StatusProperty::Ok, QString("Map"), "Map loaded successfully");
+
+
     return;
 }
 
@@ -211,67 +240,24 @@ void LaneletMapPlugin::resolveMapFile() {
     }
 }
 
-void LaneletMapPlugin::referenceFrameChanged() {
-    clear();
-    loadMap();
+void LaneletMapPlugin::resolveNavSatFixTopic() {
+    navSatFixTopic_ = navSatFixTopicProperty_.getTopicStd();
 }
 
-bool LaneletMapPlugin::updateFrames() {
-    // reference frame
-    referenceFrame_ = referenceFrameProperty_.getStdString();
-    // resolve parameters
-    try {
-        resolveParameters(referenceFrame_);
-        deleteStatus(QString("Reference Frame"));
-    } catch (std::exception& e) {
-        setStatus(rviz::StatusProperty::Error,
-                  QString("Reference Frame"),
-                  QString("Error resolving reference frame from parameter server."));
-        return false;
-    }
-    // assume altitude at sea level (0.0m)
-    referenceFrameOrigin_.altitude = 0.0;
-    // get latitude and longitude from parameter server
-    try {
-        referenceFrameOrigin_.latitude = resolveDoubleParameters(referenceFrameLatProperty_.getStdString());
-        referenceFrameOrigin_.longitude = resolveDoubleParameters(referenceFrameLonProperty_.getStdString());
-        deleteStatus(QString("Reference Frame Coordinates"));
-    } catch (std::exception& e) {
-        setStatus(rviz::StatusProperty::Error,
-                  QString("Reference Frame Coordinates"),
-                  QString("Error resolving coordinates of the reference frame from "
-                          "the parameter server. Make Sure that you "
-                          "have set the variables on the parameter server or given "
-                          "a valid coordinate (xx.yy format)."));
-        return false;
-    }
+void LaneletMapPlugin::createGeoCoordinateTransform() {
+    setStatus(rviz::StatusProperty::Warn, "Transform", "No NavSatFix received yet!");
+    coordinateTransformPtr_ = std::make_shared<util_geo_coordinates::CoordinateTransformRos>();
+    coordinateTransformPtr_->waitForInit(navSatFixTopic_, 10);
+    originFrameId_ = coordinateTransformPtr_->getOriginFrameId();
+    std::tie(latLonOrigin_.lat, latLonOrigin_.lon) = coordinateTransformPtr_->getOriginLatLon();
+    setStatus(rviz::StatusProperty::Ok, "Transform", "Transform received.");
+}
 
-    // get the Offset from the Reference Frame to the Fixed Frame in RVIZ
-    geodesy::utmOffset offsetToFixedFrame;
-    try {
-        // lookup transform
-        geometry_msgs::TransformStamped transform = tfBuffer_.lookupTransform(
-            referenceFrame_, context_->getFrameManager()->getFixedFrame(), ros::Time(0), ros::Duration(10.0));
-        offsetToFixedFrame.easting = transform.transform.translation.x;
-        offsetToFixedFrame.northing = transform.transform.translation.y;
-        offsetToFixedFrame.altitude = transform.transform.translation.z;
-        deleteStatus(QString("Transform"));
-    } catch (tf2::TransformException& e) {
-        setStatus(rviz::StatusProperty::Error,
-                  QString("Transform"),
-                  QString("Error receiving Transform from Reference Frame to Fixed Frame") + e.what());
-        return false;
-    }
-
-    // calculate the Origin coordinates of the fixed Frame
-    geodesy::fromMsgWithOffset(referenceFrameOrigin_,
-                               offsetToFixedFrame,
-                               fixedFrameOrigin_,
-                               false); // normalization is disabled. This may lead
-                                       // to inaccuracy or strange behavior when
-                                       // the reference frame is improperly
-                                       // defined.
-    return true;
+void LaneletMapPlugin::referenceFrameChanged() {
+    clear();
+    resolveNavSatFixTopic();
+    createGeoCoordinateTransform();
+    loadMap();
 }
 
 void LaneletMapPlugin::visibilityPropertyChanged() {
@@ -320,25 +306,6 @@ void LaneletMapPlugin::resolveParameters(std::string& str) {
     }
 }
 
-/*
- * Helper function to resolve ROS-Parameters
- * Resolves the first given Parameter ${myparam} or tries to interpret the input
- * as double value
- */
-double LaneletMapPlugin::resolveDoubleParameters(std::string str) {
-    double value;
-    std::size_t pos = str.find("${");
-    std::size_t endpos = str.find("}");
-    if (pos != std::string::npos || endpos != std::string::npos) {
-        auto paramName = str.substr(pos + 2, endpos - pos - 2);
-        if (!update_nh_.getParam(paramName, value)) {
-            throw std::runtime_error(std::string("Could not get Parameter from Parameter Server: ") +
-                                     paramName.c_str());
-        }
-        return value;
-    }
-    return boost::lexical_cast<double>(str);
-}
 
 /*
  * Helper function to check Filename and -Path
@@ -363,13 +330,15 @@ bool LaneletMapPlugin::checkEnvVariables() {
         deleteStatus(QString("LC_NUMERIC"));
         return true;
     } else {
-        std::string warnMessage =
+        std::string errMessage =
             std::string("Environment Variable LC_NUMERIC is not set to set to \"en_US.UTF-8\". LC_NUMERIC=") +
-            pLC_NUMERIC + std::string(" This may cause Errors when loading the map. Make sure you use an Environment "
-                                      "Variable that matches your used decimal separator.");
+            pLC_NUMERIC +
+            std::string(" This may cause Errors when loading the map. Make sure you use an Environment "
+                        "Variable that matches your used decimal separator. "
+                        "For example by adding <env name=\"LC_NUMERIC\" value=\"en_US.UTF-8\"/> to your launchfile.");
 
-        ROS_ERROR("%s", warnMessage.c_str());
-        setStatus(rviz::StatusProperty::Error, QString("LC_NUMERIC"), QString(QString::fromStdString(warnMessage)));
+        ROS_ERROR_THROTTLE(2, "%s", errMessage.c_str());
+        setStatus(rviz::StatusProperty::Error, QString("LC_NUMERIC"), QString(QString::fromStdString(errMessage)));
 
         return false;
     }

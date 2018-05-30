@@ -1,11 +1,40 @@
+/*
+ * Copyright (c) 2017
+ * FZI Forschungszentrum Informatik, Karlsruhe, Germany (www.fzi.de)
+ * KIT, Institute of Measurement and Control, Karlsruhe, Germany (www.mrt.kit.edu)
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "map_element.hpp"
-#include <simulation_utils/util_rviz.hpp>
+
+#include <util_rviz/util_rviz.hpp>
 
 namespace lanelet_rviz_plugin_ros {
 
-int MapElement::manObjCounter_ = 0;
-bool MapElement::ogreInitialized_ = false;
-
+namespace {
 // visitors for boost::variant to check type
 // TODO: transfer them in utils-library
 struct is_lanelet_ptr_t : public boost::static_visitor<bool> {
@@ -54,19 +83,22 @@ struct getVariantId : public boost::static_visitor<int> {
     }
 };
 
+} // end of anonymous namespace
+
 MapElement::MapElement(Ogre::SceneManager* scene_manager,
                        Ogre::SceneNode* parent_node,
                        std::string map_file,
-                       geodesy::UTMPoint fixedFrameOrigin,
+                       std::shared_ptr<util_geo_coordinates::CoordinateTransformRos> coordinateTransformPtr,
+                       const LatLonOrigin& latLonOrigin,
                        double laneletWidth,
                        double seperatorWidth,
                        double stopLineWidth)
         : sceneManager_(scene_manager), sceneNode_(parent_node->createChildSceneNode()),
-          fixedFrameOrigin_(fixedFrameOrigin), laneletWidth_(laneletWidth), seperatorWidth_(seperatorWidth),
+          coordinateTransformPtr_(coordinateTransformPtr), laneletWidth_(laneletWidth), seperatorWidth_(seperatorWidth),
           stopLineWidth_(stopLineWidth) {
     if (!ogreInitialized_) {
         // create Material
-        material_ = Ogre::getMaterial("lanelet_material");
+        material_ = ogre_helper::getMaterial("lanelet_material");
         // material settings
         material_->getTechnique(0)->setLightingEnabled(
             false); // appearance does not change with different scene orientation
@@ -77,6 +109,8 @@ MapElement::MapElement(Ogre::SceneManager* scene_manager,
 
         ogreInitialized_ = true;
     }
+
+    std::tie(latLonOriginX_, latLonOriginY_) = coordinateTransformPtr_->ll2xy(latLonOrigin.lat, latLonOrigin.lon);
 
     // load map and create + attach visible Ogre object
     loadMap(map_file);
@@ -181,19 +215,11 @@ void MapElement::enable(ObjectClassification classification) {
 }
 
 void MapElement::loadMap(const std::string& map_file) {
-    // try to load map and create objects
-    boost::filesystem::path map_path(map_file);
-    // check for correct filename
-    if (!boost::filesystem::exists(map_path) || map_path.extension() != ".osm") {
-        std::string errorMessage = std::string("RVIZ::lanelet_rviz_plugin_ros: Failed to "
-                                               "find map under specified path:") +
-                                   map_file.c_str();
-        throw std::runtime_error(errorMessage);
-    }
-    // Load Map from File
-    const LLet::LaneletMap theMap = LLet::LaneletMap(map_file);
 
-    // create manual objects that will be detached to the scene-node
+    // Load Map from File
+    LLet::LaneletMap theMap = LLet::LaneletMap(map_file);
+
+    // create manual objects that will be attached to the scene-node
     Ogre::ManualObject* mapManualObject =
         sceneManager_->createManualObject("object_" + std::to_string(manObjCounter_++));
     Ogre::ManualObject* seperatorManualObject =
@@ -202,6 +228,7 @@ void MapElement::loadMap(const std::string& map_file) {
     // Attach Lanelet to manual object
     mapManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
     seperatorManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
+
     // iterate through all lanelets in map-graph
     BOOST_FOREACH (const auto& vertex, boost::vertices(theMap.graph())) {
         addLaneletToManualObject(theMap.graph()[vertex].lanelet, mapManualObject);
@@ -250,7 +277,7 @@ void MapElement::addRegulatoryElements(const LLet::lanelet_ptr_t& lanelet, Ogre:
 void MapElement::attachStopLinesToSceneNode(const std::vector<LLet::member_variant_t>& stopLines,
                                             Ogre::SceneNode* parentNode) {
     // Create Manual Object, StopLines will be created as Manual Object using the
-    // Ogre::drawLine helper function
+    // ogre_helper::drawLine helper function
     Ogre::ManualObject* stopLinesManualObject =
         sceneManager_->createManualObject("object_" + std::to_string(manObjCounter_++));
     stopLinesManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
@@ -258,8 +285,8 @@ void MapElement::attachStopLinesToSceneNode(const std::vector<LLet::member_varia
         // check expected type of variant-container
         if (boost::apply_visitor(is_strip_ptr_t(), stopLine)) {
             // create the actual line
-            auto line = lineFromPts(boost::get<LLet::strip_ptr_t>(stopLine)->pts());
-            Ogre::drawLine(line, stopLinesManualObject, colorStopLine_, stopLineWidth_);
+            auto line = ogreLineFromLLetPts(boost::get<LLet::strip_ptr_t>(stopLine)->pts());
+            ogre_helper::drawLine(line, stopLinesManualObject, colorStopLine_, stopLineWidth_);
         } else {
             std::string errorMessage = std::string("RVIZ::lanelet_rviz_plugin_ros: Content-Type of Regulatory Element "
                                                    "Variant is not of expected type.");
@@ -286,8 +313,8 @@ void MapElement::attachLaneletIdToSceneNode(const LLet::lanelet_ptr_t& lanelet, 
     msg->setTextAlignment(rviz::MovableText::H_CENTER, rviz::MovableText::V_ABOVE); // Center horizontally and
                                                                                     // display above the node
 
-    Ogre::Vector3 trans = latLongPointToMeterPoint((std::get<0>(lanelet->bounds())->pts().front()));
-    util_rviz::setSafePosition(childNode, trans);
+    Ogre::Vector3 trans = ogreVec3FromLLetPoint((std::get<LLet::LEFT>(lanelet->bounds())->pts().front()));
+    util_rviz::setPositionSafely(childNode, trans);
 
     childNode->attachObject(msg);
     objects_.push_back(std::make_pair(ObjectClassification::LANELETID, msg));
@@ -295,88 +322,58 @@ void MapElement::attachLaneletIdToSceneNode(const LLet::lanelet_ptr_t& lanelet, 
 
 void MapElement::addLaneletToManualObject(const LLet::lanelet_ptr_t& lanelet, Ogre::ManualObject* manual) {
     // get line from left Linestrip points
-    auto lineLeft = lineFromPts(std::get<0>(lanelet->bounds())->pts());
+    auto lineLeft = ogreLineFromLLetPts(std::get<LLet::LEFT>(lanelet->bounds())->pts());
     // draw line as Ogre Object
-    Ogre::drawLine(lineLeft, manual, colorLeft_, laneletWidth_);
+    ogre_helper::drawLine(lineLeft, manual, colorLeft_, laneletWidth_);
     // get line from right Linestrip points
-    auto lineRight = lineFromPts(std::get<1>(lanelet->bounds())->pts());
+    auto lineRight = ogreLineFromLLetPts(std::get<LLet::RIGHT>(lanelet->bounds())->pts());
     // draw line as Ogre Object
-    Ogre::drawLine(lineRight, manual, colorRight_, laneletWidth_);
+    ogre_helper::drawLine(lineRight, manual, colorRight_, laneletWidth_);
 }
 
 void MapElement::addSeperatorToManualObject(const LLet::lanelet_ptr_t& lanelet, Ogre::ManualObject* manual) {
     // get line from first Point of the left Linestrip to the first Point of the
     // right Linestrip
     std::vector<LLet::point_with_id_t> pointsF;
-    pointsF.push_back(std::get<0>(lanelet->bounds())->pts().front());
-    pointsF.push_back(std::get<1>(lanelet->bounds())->pts().front());
+    pointsF.push_back(std::get<LLet::LEFT>(lanelet->bounds())->pts().front());
+    pointsF.push_back(std::get<LLet::RIGHT>(lanelet->bounds())->pts().front());
     // draw line as Ogre Object
-    auto line = lineFromPts(pointsF);
-    Ogre::drawLine(line, manual, colorSeperator_, seperatorWidth_);
+    auto line = ogreLineFromLLetPts(pointsF);
+    ogre_helper::drawLine(line, manual, colorSeperator_, seperatorWidth_);
 
     // get line from last Point of the left Linestrip to the last Point of the
     // right Linestrip
     std::vector<LLet::point_with_id_t> pointsL;
-    pointsL.push_back(std::get<0>(lanelet->bounds())->pts().back());
-    pointsL.push_back(std::get<1>(lanelet->bounds())->pts().back());
+    pointsL.push_back(std::get<LLet::LEFT>(lanelet->bounds())->pts().back());
+    pointsL.push_back(std::get<LLet::RIGHT>(lanelet->bounds())->pts().back());
     // draw line as Ogre Object
-    line = lineFromPts(pointsL);
-    Ogre::drawLine(line, manual, colorSeperator_, seperatorWidth_);
+    line = ogreLineFromLLetPts(pointsL);
+    ogre_helper::drawLine(line, manual, colorSeperator_, seperatorWidth_);
 }
 
-Ogre::Line MapElement::lineFromPts(const std::vector<LLet::point_with_id_t>& ptsVector) {
-    Ogre::Line line;
+Ogre::Vector3 MapElement::ogreVec3FromLatLon(double lat, double lon) {
+
+    double x, y;
+    std::tie(x, y) = coordinateTransformPtr_->ll2xy(lat, lon);
+    Ogre::Vector3 OgreVec3;
+    using boost::numeric_cast;
+    using boost::numeric::bad_numeric_cast;
+    OgreVec3 =
+        Ogre::Vector3(numeric_cast<Ogre::Real>(x - latLonOriginX_), numeric_cast<Ogre::Real>(y - latLonOriginY_), 0.f);
+    return OgreVec3;
+}
+
+ogre_helper::Line MapElement::ogreLineFromLLetPts(const std::vector<LLet::point_with_id_t>& ptsVector) {
+    ogre_helper::Line line;
     for (LLet::point_with_id_t point : ptsVector) {
-        geographic_msgs::GeoPoint geoPoint;
-        geoPoint.latitude = std::get<0>(point);
-        geoPoint.longitude = std::get<1>(point);
-        geoPoint.altitude = 0.0; // assume sea level (altitude = 0.0m)
-        line.push_back(latLongPointToMeterPoint(geoPoint));
+        line.push_back(ogreVec3FromLLetPoint(point));
     }
     return line;
 }
 
-/**
- * transforms lat/long/alt coordinates to xyz-coordinates (in reference to
- * transform_)
- * throws std::domain_error if input is not in the same UTM-Grid-Zone as
- * reference Point
- */
-Ogre::Vector3 MapElement::latLongPointToMeterPoint(const geographic_msgs::GeoPoint& geoPoint) {
-    // convert WGS84 Point to UTM Point within actual grid-zone
-    geodesy::UTMPoint utmPoint;
-    geodesy::fromMsg(geoPoint, utmPoint);
-    // check for same Grid-Zone
-    // TODO: implement some kind of conversion, so that points can be in different
-    // grid zones. Until then it is
-    // disabled.
-    if (!geodesy::sameGridZone(utmPoint, fixedFrameOrigin_)) {
-        std::string errorMessage = std::string("RVIZ::lanelet_rviz_plugin_ros: Origin of FixedFrame and Points of "
-                                               "Lanelet-Map are not in the same UTM-Grid-Zone.");
-        errorMessage += std::string(" FixedFrame: ");
-        errorMessage += fixedFrameOrigin_.band;
-        errorMessage += std::to_string(fixedFrameOrigin_.zone);
-        errorMessage += std::string(" Point: ");
-        errorMessage += utmPoint.band;
-        errorMessage += std::to_string(utmPoint.zone);
-        throw std::runtime_error(errorMessage);
-    }
-    Ogre::Vector3 xyzPoint;
-    using boost::numeric_cast;
-    using boost::numeric::bad_numeric_cast;
-    xyzPoint = Ogre::Vector3(numeric_cast<float>(utmPoint.easting - fixedFrameOrigin_.easting),
-                             numeric_cast<float>(utmPoint.northing - fixedFrameOrigin_.northing),
-                             numeric_cast<float>(utmPoint.altitude - fixedFrameOrigin_.altitude));
-    return xyzPoint;
-}
+Ogre::Vector3 MapElement::ogreVec3FromLLetPoint(LLet::point_with_id_t point) {
 
-Ogre::Vector3 MapElement::latLongPointToMeterPoint(LLet::point_with_id_t point) {
-    geographic_msgs::GeoPoint geoPoint;
-    geoPoint.latitude = std::get<0>(point);
-    geoPoint.longitude = std::get<1>(point);
-    geoPoint.altitude = 0.0; // assume sea level (altitude = 0.0m)
-
-    return latLongPointToMeterPoint(geoPoint);
+    return ogreVec3FromLatLon(std::get<LLet::LAT>(point), std::get<LLet::LON>(point));
 }
 
 } // namespace lanelet_rviz_plugin_ros

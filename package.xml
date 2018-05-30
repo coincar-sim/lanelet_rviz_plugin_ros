@@ -1,15 +1,14 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>lanelet_rviz_plugin_ros</name>
-  <version>0.1.0</version>
+  <version>1.0.0</version>
   <description>Rviz Plugin for displaying a lanelet map</description>
 
-  <license>contact-the-maintainer</license>
+  <license>BSD</license>
   <maintainer email="maximilian.naumann@kit.edu">Maximilian Naumann</maintainer>
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>mrt_cmake_modules</build_depend>
-  <build_depend>rosparam_handler</build_depend>
   <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>
   <test_depend>gtest</test_depend>
@@ -26,7 +25,8 @@
   <depend>geodesy</depend>
   <depend>sim_lanelet</depend>
   <depend>boost</depend>
-  <depend>simulation_utils</depend>
+  <depend>util_rviz</depend>
+  <depend>util_geo_coordinates_ros</depend>
 
   <export>
     <rviz plugin="${prefix}/plugin_map_description.xml"/>

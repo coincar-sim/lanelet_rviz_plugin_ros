@@ -1,3 +1,33 @@
+/*
+ * Copyright (c) 2017
+ * FZI Forschungszentrum Informatik, Karlsruhe, Germany (www.fzi.de)
+ * KIT, Institute of Measurement and Control, Karlsruhe, Germany (www.mrt.kit.edu)
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #pragma once
 
 #include <OGRE/OgreManualObject.h>
@@ -6,19 +36,22 @@
 #include <OGRE/OgreSceneNode.h>
 #include <OGRE/OgreVector3.h>
 
-namespace Ogre {
+namespace ogre_helper {
+
+using namespace Ogre;
 
 typedef std::vector<Vector3> Line;
 typedef std::vector<Vector3> MonoPolygon;
 
-namespace {
-MaterialPtr getMaterial(const std::string& matName) {
+
+inline MaterialPtr getMaterial(const std::string& matName) {
     auto& manager = MaterialManager::getSingleton();
     MaterialPtr matIt = manager.createOrRetrieve(matName, ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME)
                             .first.dynamicCast<Material>();
     return matIt;
 }
 
+namespace {
 template <typename Iter>
 inline Vector3 getNormal(Iter it, Iter begin, Iter end) {
     Vector3 zero(0, 0, 0);
@@ -88,7 +121,6 @@ inline void drawMonoPolygon(const MonoPolygon& poly,
         obj->normal(0, 0, 1);
         obj->colour(color);
         if (count >= 2) {
-            assert(startIndex + count - 2 >= 0);
             assert(obj->getCurrentVertexCount() > startIndex + count);
             obj->triangle(startIndex + count - 2, startIndex + count - 1, startIndex + count);
         }
@@ -97,7 +129,6 @@ inline void drawMonoPolygon(const MonoPolygon& poly,
         obj->normal(0, 0, 1);
         obj->colour(color);
         if (count >= 2) {
-            assert(startIndex + count - 2 >= 0);
             assert(obj->getCurrentVertexCount() > startIndex + count);
             assert(obj->getCurrentVertexCount() < 65535);
             obj->triangle(startIndex + count, startIndex + count - 1, startIndex + count - 2);
