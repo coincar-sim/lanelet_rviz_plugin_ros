@@ -42,10 +42,6 @@
 #include <tf2_ros/transform_listener.h>
 #include <rviz/properties/bool_property.h>
 #include <rviz/properties/float_property.h>
-#include <rviz/properties/string_property.h>
-#include <rviz/properties/ros_topic_property.h>
-
-#include <util_geo_coordinates_ros/util_geo_coordinates_ros.hpp>
 
 #include "map_element.hpp"
 
@@ -69,7 +65,6 @@ protected:
     virtual void fixedFrameChanged();
 
 private Q_SLOTS:
-    void mapFileChanged();
     void visibilityPropertyChanged();
     void referenceFrameChanged();
     void lineWidthChanged();
@@ -78,30 +73,16 @@ private:
     void clear();
     void loadMap();
     void createMapObject();
-    bool checkMapFile();
-    void resolveParameters(std::string& str);
-    void resolveMapFile();
-    void resolveNavSatFixTopic();
-    void createGeoCoordinateTransform();
-    bool checkEnvVariables();
 
     // tf2-listener
     tf2_ros::Buffer tfBuffer_;
     tf2_ros::TransformListener tfListener_;
 
-    // map
-    std::string mapFileName_;
-    std::string navSatFixTopic_;
-
     std::string originFrameId_;
-    LatLonOrigin latLonOrigin_;
     std::unique_ptr<MapElement> mapElement_;
-    std::shared_ptr<util_geo_coordinates::CoordinateTransformRos> coordinateTransformPtr_;
+    lanelet::LaneletMapConstPtr theMapPtr_;
 
     // RVIZ-properties
-    rviz::StringProperty mapFileProperty_;
-    rviz::RosTopicProperty navSatFixTopicProperty_;
-
     rviz::BoolProperty mapVisibilityProperty_;
     rviz::BoolProperty idVisibilityProperty_;
     rviz::BoolProperty seperatorVisibilityProperty_;
