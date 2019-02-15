@@ -21,12 +21,15 @@
 
   <depend>rviz</depend>
   <depend>mrt_qt-dev</depend>
-  <depend>nav_msgs</depend>
   <depend>geodesy</depend>
-  <depend>sim_lanelet</depend>
   <depend>boost</depend>
   <depend>util_rviz</depend>
-  <depend>util_geo_coordinates_ros</depend>
+
+  <depend>lanelet2_io</depend>
+  <depend>lanelet2_core</depend>
+  <depend>lanelet2_projection</depend>
+  <depend>lanelet2_interface_ros</depend>
+
 
   <export>
     <rviz plugin="${prefix}/plugin_map_description.xml"/>

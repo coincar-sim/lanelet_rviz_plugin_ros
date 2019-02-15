@@ -34,68 +34,15 @@
 
 namespace lanelet_rviz_plugin_ros {
 
-namespace {
-// visitors for boost::variant to check type
-// TODO: transfer them in utils-library
-struct is_lanelet_ptr_t : public boost::static_visitor<bool> {
-    bool operator()(LLet::lanelet_ptr_t p) const {
-        return true;
-    }
-    bool operator()(LLet::strip_ptr_t p) const {
-        return false;
-    }
-    bool operator()(LLet::point_with_id_t p) const {
-        return false;
-    }
-};
-struct is_strip_ptr_t : public boost::static_visitor<bool> {
-    bool operator()(LLet::lanelet_ptr_t p) const {
-        return false;
-    }
-    bool operator()(LLet::strip_ptr_t p) const {
-        return true;
-    }
-    bool operator()(LLet::point_with_id_t p) const {
-        return false;
-    }
-};
-struct is_point_with_id_t : public boost::static_visitor<bool> {
-    bool operator()(LLet::lanelet_ptr_t p) const {
-        return false;
-    }
-    bool operator()(LLet::strip_ptr_t p) const {
-        return false;
-    }
-    bool operator()(LLet::point_with_id_t p) const {
-        return true;
-    }
-};
-
-struct getVariantId : public boost::static_visitor<int> {
-    int operator()(LLet::lanelet_ptr_t p) const {
-        return p->id();
-    }
-    int operator()(LLet::strip_ptr_t p) const {
-        return 0;
-    } // a LineStrip has no Id by itself. return zero
-    int operator()(LLet::point_with_id_t p) const {
-        return std::get<2>(p);
-    }
-};
-
-} // end of anonymous namespace
 
 MapElement::MapElement(Ogre::SceneManager* scene_manager,
                        Ogre::SceneNode* parent_node,
-                       std::string map_file,
-                       std::shared_ptr<util_geo_coordinates::CoordinateTransformRos> coordinateTransformPtr,
-                       const LatLonOrigin& latLonOrigin,
+                       lanelet::LaneletMapConstPtr theMap,
                        double laneletWidth,
                        double seperatorWidth,
                        double stopLineWidth)
-        : sceneManager_(scene_manager), sceneNode_(parent_node->createChildSceneNode()),
-          coordinateTransformPtr_(coordinateTransformPtr), laneletWidth_(laneletWidth), seperatorWidth_(seperatorWidth),
-          stopLineWidth_(stopLineWidth) {
+        : sceneManager_(scene_manager), sceneNode_(parent_node->createChildSceneNode()), laneletWidth_(laneletWidth),
+          seperatorWidth_(seperatorWidth), stopLineWidth_(stopLineWidth) {
     if (!ogreInitialized_) {
         // create Material
         material_ = ogre_helper::getMaterial("lanelet_material");
@@ -110,10 +57,8 @@ MapElement::MapElement(Ogre::SceneManager* scene_manager,
         ogreInitialized_ = true;
     }
 
-    std::tie(latLonOriginX_, latLonOriginY_) = coordinateTransformPtr_->ll2xy(latLonOrigin.lat, latLonOrigin.lon);
-
     // load map and create + attach visible Ogre object
-    loadMap(map_file);
+    visualizeMap(theMap);
 }
 
 MapElement::~MapElement() {
@@ -214,28 +159,27 @@ void MapElement::enable(ObjectClassification classification) {
     }
 }
 
-void MapElement::loadMap(const std::string& map_file) {
+void MapElement::visualizeMap(lanelet::LaneletMapConstPtr theMap) {
 
-    // Load Map from File
-    LLet::LaneletMap theMap = LLet::LaneletMap(map_file);
 
-    // create manual objects that will be attached to the scene-node
+    // Create manual objects that will be attached to the scene-node
     Ogre::ManualObject* mapManualObject =
-        sceneManager_->createManualObject("object_" + std::to_string(manObjCounter_++));
+        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
     Ogre::ManualObject* seperatorManualObject =
-        sceneManager_->createManualObject("object_" + std::to_string(manObjCounter_++));
+        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
 
     // Attach Lanelet to manual object
     mapManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
     seperatorManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
 
-    // iterate through all lanelets in map-graph
-    BOOST_FOREACH (const auto& vertex, boost::vertices(theMap.graph())) {
-        addLaneletToManualObject(theMap.graph()[vertex].lanelet, mapManualObject);
-        addSeperatorToManualObject(theMap.graph()[vertex].lanelet, seperatorManualObject);
-        addRegulatoryElements(theMap.graph()[vertex].lanelet, sceneNode_);
-        attachLaneletIdToSceneNode(theMap.graph()[vertex].lanelet, sceneNode_);
+    // Iterate through all lanelets in map-graph
+    for (const lanelet::ConstLanelet& lanelet : theMap->laneletLayer) {
+        addLaneletToManualObject(lanelet, mapManualObject);
+        addSeperatorToManualObject(lanelet, seperatorManualObject);
+        addRegulatoryElements(lanelet, sceneNode_);
+        attachLaneletIdToSceneNode(lanelet, sceneNode_);
     }
+
     mapManualObject->end();
     seperatorManualObject->end();
 
@@ -253,47 +197,29 @@ void MapElement::loadMap(const std::string& map_file) {
     }
 }
 
-void MapElement::addRegulatoryElements(const LLet::lanelet_ptr_t& lanelet, Ogre::SceneNode* parentNode) {
+void MapElement::addRegulatoryElements(const lanelet::ConstLanelet& lanelet, Ogre::SceneNode* parentNode) {
     // create child SceneNode. Only SceneNodes can be positioned.
     Ogre::SceneNode* regulatoryElementsNode = parentNode->createChildSceneNode();
     // get pointer to regulatory elements
-    auto regulatoryElements = lanelet->regulatory_elements();
+    auto regulatoryElements = lanelet.regulatoryElements();
     // loop  over the regulatory elements
     for (auto&& regElement : regulatoryElements) {
-        // check the type of the regulatory Element
-        // for each type a function to create the objects has to be implemented
-        // seperately
-        // because every regulatory element might be defined differently
-        // TODO: Add some generic regulatory Element (e.g. dummy-element for not yet
-        // implemented types)
-
-        // Stop Lines
-        attachStopLinesToSceneNode(regElement->members("stop_line"), regulatoryElementsNode);
-
-        // TODO: Add other regulatory Elements
+        // Get reference lines
+        auto refLines = regElement.get()->getParameters<lanelet::ConstLineString3d>(lanelet::RoleName::RefLine);
+        attachRefLinesToSceneNode(refLines, regulatoryElementsNode);
     }
 }
 
-void MapElement::attachStopLinesToSceneNode(const std::vector<LLet::member_variant_t>& stopLines,
-                                            Ogre::SceneNode* parentNode) {
-    // Create Manual Object, StopLines will be created as Manual Object using the
+void MapElement::attachRefLinesToSceneNode(std::vector<lanelet::ConstLineString3d>& stopLines,
+                                           Ogre::SceneNode* parentNode) {
+    // Create Manual Object, RefLines will be created as Manual Object using the
     // ogre_helper::drawLine helper function
     Ogre::ManualObject* stopLinesManualObject =
-        sceneManager_->createManualObject("object_" + std::to_string(manObjCounter_++));
+        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
     stopLinesManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
     for (auto&& stopLine : stopLines) {
-        // check expected type of variant-container
-        if (boost::apply_visitor(is_strip_ptr_t(), stopLine)) {
-            // create the actual line
-            auto line = ogreLineFromLLetPts(boost::get<LLet::strip_ptr_t>(stopLine)->pts());
-            ogre_helper::drawLine(line, stopLinesManualObject, colorStopLine_, stopLineWidth_);
-        } else {
-            std::string errorMessage = std::string("RVIZ::lanelet_rviz_plugin_ros: Content-Type of Regulatory Element "
-                                                   "Variant is not of expected type.");
-            errorMessage += std::string(" ID (0 for LineStrip without ID): ");
-            errorMessage += std::to_string(boost::apply_visitor(getVariantId(), stopLine));
-            throw std::runtime_error(errorMessage);
-        }
+        auto line = MapElement::ogreLineFromLLetLineString(stopLine);
+        ogre_helper::drawLine(line, stopLinesManualObject, colorStopLine_, stopLineWidth_);
     }
     if (stopLinesManualObject->getNumSections()) {
         parentNode->attachObject(stopLinesManualObject);
@@ -303,77 +229,80 @@ void MapElement::attachStopLinesToSceneNode(const std::vector<LLet::member_varia
     stopLinesManualObject->end();
 }
 
-void MapElement::attachLaneletIdToSceneNode(const LLet::lanelet_ptr_t& lanelet, Ogre::SceneNode* parentNode) {
+void MapElement::attachLaneletIdToSceneNode(const lanelet::ConstLanelet& lanelet, Ogre::SceneNode* parentNode) {
     // create child SceneNode. Only SceneNodes can be positioned.
     Ogre::SceneNode* childNode = parentNode->createChildSceneNode();
 
-    rviz::MovableText* msg = new rviz::MovableText(std::to_string(lanelet->id()));
+    rviz::MovableText* msg = new rviz::MovableText(std::to_string(lanelet.id()));
     msg->setCharacterHeight(2.0); // TODO: create property and read from the property
     msg->setColor(Ogre::ColourValue::White);
     msg->setTextAlignment(rviz::MovableText::H_CENTER, rviz::MovableText::V_ABOVE); // Center horizontally and
                                                                                     // display above the node
 
-    Ogre::Vector3 trans = ogreVec3FromLLetPoint((std::get<LLet::LEFT>(lanelet->bounds())->pts().front()));
+    Ogre::Vector3 trans = ogreVec3FromLLetPoint(lanelet.leftBound().front());
     util_rviz::setPositionSafely(childNode, trans);
 
     childNode->attachObject(msg);
     objects_.push_back(std::make_pair(ObjectClassification::LANELETID, msg));
 }
 
-void MapElement::addLaneletToManualObject(const LLet::lanelet_ptr_t& lanelet, Ogre::ManualObject* manual) {
+void MapElement::addLaneletToManualObject(const lanelet::ConstLanelet& lanelet, Ogre::ManualObject* manual) {
     // get line from left Linestrip points
-    auto lineLeft = ogreLineFromLLetPts(std::get<LLet::LEFT>(lanelet->bounds())->pts());
+    auto leftbound = lanelet.leftBound();
+    auto lineLeft = ogreLineFromLLetLineString(leftbound);
     // draw line as Ogre Object
     ogre_helper::drawLine(lineLeft, manual, colorLeft_, laneletWidth_);
     // get line from right Linestrip points
-    auto lineRight = ogreLineFromLLetPts(std::get<LLet::RIGHT>(lanelet->bounds())->pts());
+    auto rightbound = lanelet.rightBound();
+    auto lineRight = ogreLineFromLLetLineString(rightbound);
     // draw line as Ogre Object
     ogre_helper::drawLine(lineRight, manual, colorRight_, laneletWidth_);
 }
 
-void MapElement::addSeperatorToManualObject(const LLet::lanelet_ptr_t& lanelet, Ogre::ManualObject* manual) {
+
+void MapElement::addSeperatorToManualObject(const lanelet::ConstLanelet& lanelet, Ogre::ManualObject* manual) {
     // get line from first Point of the left Linestrip to the first Point of the
     // right Linestrip
-    std::vector<LLet::point_with_id_t> pointsF;
-    pointsF.push_back(std::get<LLet::LEFT>(lanelet->bounds())->pts().front());
-    pointsF.push_back(std::get<LLet::RIGHT>(lanelet->bounds())->pts().front());
+    lanelet::ConstPoints3d pointsF;
+    pointsF.push_back(lanelet.leftBound().front());
+    pointsF.push_back(lanelet.rightBound().front());
     // draw line as Ogre Object
     auto line = ogreLineFromLLetPts(pointsF);
     ogre_helper::drawLine(line, manual, colorSeperator_, seperatorWidth_);
 
     // get line from last Point of the left Linestrip to the last Point of the
     // right Linestrip
-    std::vector<LLet::point_with_id_t> pointsL;
-    pointsL.push_back(std::get<LLet::LEFT>(lanelet->bounds())->pts().back());
-    pointsL.push_back(std::get<LLet::RIGHT>(lanelet->bounds())->pts().back());
+    lanelet::ConstPoints3d pointsL;
+    pointsF.push_back(lanelet.leftBound().front());
+    pointsF.push_back(lanelet.rightBound().front());
     // draw line as Ogre Object
     line = ogreLineFromLLetPts(pointsL);
     ogre_helper::drawLine(line, manual, colorSeperator_, seperatorWidth_);
 }
 
-Ogre::Vector3 MapElement::ogreVec3FromLatLon(double lat, double lon) {
 
-    double x, y;
-    std::tie(x, y) = coordinateTransformPtr_->ll2xy(lat, lon);
-    Ogre::Vector3 OgreVec3;
-    using boost::numeric_cast;
-    using boost::numeric::bad_numeric_cast;
-    OgreVec3 =
-        Ogre::Vector3(numeric_cast<Ogre::Real>(x - latLonOriginX_), numeric_cast<Ogre::Real>(y - latLonOriginY_), 0.f);
-    return OgreVec3;
-}
-
-ogre_helper::Line MapElement::ogreLineFromLLetPts(const std::vector<LLet::point_with_id_t>& ptsVector) {
+ogre_helper::Line MapElement::ogreLineFromLLetLineString(lanelet::ConstLineString3d& lineString) {
     ogre_helper::Line line;
-    for (LLet::point_with_id_t point : ptsVector) {
+    for (lanelet::ConstPoint3d point : lineString) {
         line.push_back(ogreVec3FromLLetPoint(point));
     }
     return line;
 }
 
-Ogre::Vector3 MapElement::ogreVec3FromLLetPoint(LLet::point_with_id_t point) {
 
-    return ogreVec3FromLatLon(std::get<LLet::LAT>(point), std::get<LLet::LON>(point));
+ogre_helper::Line MapElement::ogreLineFromLLetPts(lanelet::ConstPoints3d& ptsVector) {
+    ogre_helper::Line line;
+    for (lanelet::ConstPoint3d point : ptsVector) {
+        line.push_back(ogreVec3FromLLetPoint(point));
+    }
+    return line;
+}
+
+
+Ogre::Vector3 MapElement::ogreVec3FromLLetPoint(lanelet::ConstPoint3d point) {
+    using boost::numeric_cast;
+    using boost::numeric::bad_numeric_cast;
+    return Ogre::Vector3(numeric_cast<Ogre::Real>(point.x()), numeric_cast<Ogre::Real>(point.y()), 0.f);
 }
 
 } // namespace lanelet_rviz_plugin_ros

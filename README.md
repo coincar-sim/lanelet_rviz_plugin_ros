@@ -1,5 +1,5 @@
 # lanelet_rviz_plugin_ros
-Rviz Plugin for displaying a [lanelet](https://github.com/phbender/liblanelet) map.
+Rviz Plugin for displaying a [lanelet2](https://github.com/fzi-forschungszentrum-informatik/Lanelet2) map.
 
 ## Installation
 * add the package and its dependencies to your workspace
@@ -14,7 +14,7 @@ Rviz Plugin for displaying a [lanelet](https://github.com/phbender/liblanelet) m
 * launch `$ roslaunch lanelet_rviz_plugin_ros sample_lanelet_viz.launch` for an example
 
 ## Contributors
-Pascal Böhmler, Maximilian Naumann
+Pascal Böhmler, Alexander Naumann, Maximilian Naumann
 
 ## License
 This package is distributed under the 3-Clause BSD License, see [LICENSE](LICENSE).

@@ -30,7 +30,7 @@
 
 #include "lanelet_plugin.hpp"
 
-#include <sensor_msgs/NavSatFix.h>
+#include <lanelet2_interface_ros/lanelet2_interface_ros.hpp>
 
 namespace {
 
@@ -68,20 +68,7 @@ Ogre::SceneNode* getChildSceneNodeAtFrameId(const tf2_ros::Buffer& tf_buffer,
 namespace lanelet_rviz_plugin_ros {
 
 LaneletMapPlugin::LaneletMapPlugin()
-        : Display(), tfListener_{tfBuffer_}, mapFileName_(),
-          mapFileProperty_("Map-File",
-                           "",
-                           "Path and filename of the Map (*.osm-File). Ros "
-                           "parameters are allowed (${myparam}).",
-                           this,
-                           SLOT(mapFileChanged()),
-                           this),
-          navSatFixTopicProperty_("NavSatFix Topic",
-                                  "",
-                                  "",
-                                  "Describes the frame_id with origin (x=0,y=0,z=0) at the given lat/lon coordinates",
-                                  this,
-                                  SLOT(referenceFrameChanged())),
+        : Display(), tfListener_{tfBuffer_},
           mapVisibilityProperty_("Visibility of Map", true, "", this, SLOT(visibilityPropertyChanged()), this),
           idVisibilityProperty_(
               "Visibility of LaneletIds", true, "", &mapVisibilityProperty_, SLOT(visibilityPropertyChanged()), this),
@@ -115,10 +102,6 @@ LaneletMapPlugin::LaneletMapPlugin()
                                  &mapVisibilityProperty_,
                                  SLOT(lineWidthChanged()),
                                  this) {
-
-    QString message_type = QString::fromStdString(ros::message_traits::datatype<sensor_msgs::NavSatFix>());
-    navSatFixTopicProperty_.setMessageType(message_type);
-    navSatFixTopicProperty_.setDescription(message_type + " topic to subscribe to.");
 }
 
 LaneletMapPlugin::~LaneletMapPlugin() {
@@ -132,14 +115,10 @@ void LaneletMapPlugin::reset() {
 void LaneletMapPlugin::onInitialize() {
     // call base class initialize function
     Display::onInitialize();
-    checkEnvVariables();
 }
 
 void LaneletMapPlugin::onEnable() {
     clear();
-    // Update Map Filename
-    resolveMapFile();
-    // Load Map
     loadMap();
 }
 
@@ -164,40 +143,34 @@ void LaneletMapPlugin::loadMap() {
         // do not load map if plugin is not enabled
         return;
     }
-    if (checkEnvVariables() && checkMapFile()) {
-        // (re)load Map
-        createMapObject();
-    }
+    createMapObject();
 }
 
 /*
  * Load Map and and attach visible Map-Object to the scene_node.
  */
 void LaneletMapPlugin::createMapObject() {
-
-    if (!coordinateTransformPtr_) {
+    // try to load map
+    try {
+        ROS_INFO("LaneletMapPlugin: retrieving map from lanelet2_interface_ros...");
+        lanelet2_interface_ros::Lanelet2InterfaceRos ll2if;
+        theMapPtr_ = ll2if.waitForMapPtr(10, 0.5);
+        originFrameId_ = ll2if.waitForFrameIdMap(10, 0.1);
+    } catch (std::exception& e) {
         setStatus(rviz::StatusProperty::Error,
-                  "Transform",
-                  "Coordinate transformation not available, cannot create map object!");
+                  QString("Map"),
+                  QString("Error during map loading with lanelet2_interface_ros: ") + e.what());
         return;
-    } else {
-        setStatus(rviz::StatusProperty::Ok,
-                  "Transform",
-                  QString("Transform ok, originFrameId_=") + QString::fromStdString(originFrameId_));
     }
 
-    // try to load map and create map object
+    // try to create map element
     try {
         Ogre::SceneNode* scene_node_origin_frame;
         scene_node_origin_frame = getChildSceneNodeAtFrameId(tfBuffer_, context_, scene_node_, originFrameId_);
-
-
         // create Map Element. It is attached to the scene_node on creation
         mapElement_ = std::make_unique<MapElement>(scene_manager_,
                                                    scene_node_origin_frame,
-                                                   mapFileName_,
-                                                   coordinateTransformPtr_,
-                                                   latLonOrigin_,
+                                                   theMapPtr_,
                                                    static_cast<double>(laneletWidthProperty_.getFloat()),
                                                    static_cast<double>(seperatorWidthProperty_.getFloat()),
                                                    static_cast<double>(stopLineWidthProperty_.getFloat()));
@@ -209,7 +182,8 @@ void LaneletMapPlugin::createMapObject() {
                   origin.y);
 
     } catch (std::exception& e) {
-        setStatus(rviz::StatusProperty::Error, QString("Map"), QString("Error during map creation: ") + e.what());
+        setStatus(
+            rviz::StatusProperty::Error, QString("Map"), QString("Error during map element creation: ") + e.what());
         return;
     }
     // Set Visibility for individual Map Elements
@@ -217,46 +191,11 @@ void LaneletMapPlugin::createMapObject() {
 
     setStatus(rviz::StatusProperty::Ok, QString("Map"), "Map loaded successfully");
 
-
     return;
-}
-
-void LaneletMapPlugin::mapFileChanged() {
-    clear();
-    resolveMapFile();
-    loadMap();
-}
-
-void LaneletMapPlugin::resolveMapFile() {
-    mapFileName_ = mapFileProperty_.getStdString();
-    // resolve parameters
-    try {
-        resolveParameters(mapFileName_);
-    } catch (std::exception& e) {
-        setStatus(rviz::StatusProperty::Error,
-                  QString("Map"),
-                  QString("Error resolving map filename (or parts) from parameter server."));
-        return;
-    }
-}
-
-void LaneletMapPlugin::resolveNavSatFixTopic() {
-    navSatFixTopic_ = navSatFixTopicProperty_.getTopicStd();
-}
-
-void LaneletMapPlugin::createGeoCoordinateTransform() {
-    setStatus(rviz::StatusProperty::Warn, "Transform", "No NavSatFix received yet!");
-    coordinateTransformPtr_ = std::make_shared<util_geo_coordinates::CoordinateTransformRos>();
-    coordinateTransformPtr_->waitForInit(navSatFixTopic_, 10);
-    originFrameId_ = coordinateTransformPtr_->getOriginFrameId();
-    std::tie(latLonOrigin_.lat, latLonOrigin_.lon) = coordinateTransformPtr_->getOriginLatLon();
-    setStatus(rviz::StatusProperty::Ok, "Transform", "Transform received.");
 }
 
 void LaneletMapPlugin::referenceFrameChanged() {
     clear();
-    resolveNavSatFixTopic();
-    createGeoCoordinateTransform();
     loadMap();
 }
 
@@ -283,65 +222,8 @@ void LaneletMapPlugin::visibilityPropertyChanged() {
 }
 
 void LaneletMapPlugin::lineWidthChanged() {
+    clear();
     loadMap();
-}
-
-/*
- * Helper function to resolve ROS-Parameters
- */
-void LaneletMapPlugin::resolveParameters(std::string& str) {
-    while (str.find("${") != std::string::npos) {
-        auto pos = str.find("${");
-        if (pos != std::string::npos) {
-            auto endpos = str.find("}");
-            auto paramName = str.substr(pos + 2, endpos - pos - 2);
-            std::string value;
-            if (!update_nh_.getParam(paramName, value)) {
-                throw std::runtime_error(std::string("Could not get Parameter from Parameter Server: ") +
-                                         paramName.c_str());
-            }
-            str.erase(pos, endpos - pos + 1);
-            str.insert(pos, value);
-        }
-    }
-}
-
-
-/*
- * Helper function to check Filename and -Path
- */
-bool LaneletMapPlugin::checkMapFile() {
-    boost::filesystem::path map_path(mapFileName_);
-    if (!boost::filesystem::exists(map_path) || map_path.extension() != ".osm") {
-        setStatus(rviz::StatusProperty::Error,
-                  "Map",
-                  "Failed to find map under specified path(" + QString::fromStdString(mapFileName_) + ")");
-        return false;
-    }
-    return true;
-}
-
-bool LaneletMapPlugin::checkEnvVariables() {
-    // TODO: check for other compatible (decimal seperator is point) locales.
-
-    std::string pLC_NUMERIC = std::string(getenv("LC_NUMERIC"));
-
-    if (pLC_NUMERIC == "en_US.UTF-8") {
-        deleteStatus(QString("LC_NUMERIC"));
-        return true;
-    } else {
-        std::string errMessage =
-            std::string("Environment Variable LC_NUMERIC is not set to set to \"en_US.UTF-8\". LC_NUMERIC=") +
-            pLC_NUMERIC +
-            std::string(" This may cause Errors when loading the map. Make sure you use an Environment "
-                        "Variable that matches your used decimal separator. "
-                        "For example by adding <env name=\"LC_NUMERIC\" value=\"en_US.UTF-8\"/> to your launchfile.");
-
-        ROS_ERROR_THROTTLE(2, "%s", errMessage.c_str());
-        setStatus(rviz::StatusProperty::Error, QString("LC_NUMERIC"), QString(QString::fromStdString(errMessage)));
-
-        return false;
-    }
 }
 
 } // namespace lanelet_rviz_plugin_ros

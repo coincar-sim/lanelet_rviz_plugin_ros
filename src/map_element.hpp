@@ -47,13 +47,9 @@
 #include <ros/ros.h>
 #include <rviz/ogre_helpers/movable_text.h>
 
-#include <sim_lanelet/BoundingBox.hpp>
-#include <sim_lanelet/Lanelet.hpp>
-#include <sim_lanelet/LaneletMap.hpp>
-#include <sim_lanelet/RegulatoryElement.hpp>
-#include <sim_lanelet/lanelet_point.hpp>
-#include <sim_lanelet/llet_xml.hpp>
-#include <util_geo_coordinates_ros/util_geo_coordinates_ros.hpp>
+#include <lanelet2_io/Io.h>
+#include <lanelet2_projection/UTM.h>
+#include <lanelet2_core/primitives/Lanelet.h>
 
 
 namespace lanelet_rviz_plugin_ros {
@@ -75,9 +71,7 @@ class MapElement {
 public:
     MapElement(Ogre::SceneManager* scene_manager,
                Ogre::SceneNode* parent_node,
-               std::string map_file,
-               std::shared_ptr<util_geo_coordinates::CoordinateTransformRos> coordinateTransformPtr,
-               const LatLonOrigin& latLonOrigin,
+               lanelet::LaneletMapConstPtr theMap,
                double laneletWidth = 1.0,
                double seperatorWidth = 0.5,
                double stopLineWidth = 0.5);
@@ -93,25 +87,22 @@ public:
     bool ogreInitialized_{false}; // to check whether ogre settings have been applied
 
 private:
-    void loadMap(const std::string& map_file);
-    void addLaneletToManualObject(const LLet::lanelet_ptr_t& lanelet, Ogre::ManualObject* manual);
-    void addSeperatorToManualObject(const LLet::lanelet_ptr_t& lanelet, Ogre::ManualObject* manual);
-    void attachStopLinesToSceneNode(const std::vector<LLet::member_variant_t>& stopLines, Ogre::SceneNode* parentNode);
-    void attachLaneletIdToSceneNode(const LLet::lanelet_ptr_t& lanelet, Ogre::SceneNode* parentNode);
-    void addRegulatoryElements(const LLet::lanelet_ptr_t& lanelet, Ogre::SceneNode* parentNode);
+    void visualizeMap(lanelet::LaneletMapConstPtr theMap);
+    void addLaneletToManualObject(const lanelet::ConstLanelet& lanelet, Ogre::ManualObject* manual);
+    void addSeperatorToManualObject(const lanelet::ConstLanelet& lanelet, Ogre::ManualObject* manual);
+    void attachRefLinesToSceneNode(std::vector<lanelet::ConstLineString3d>& stopLines, Ogre::SceneNode* parentNode);
+    void attachLaneletIdToSceneNode(const lanelet::ConstLanelet& lanelet, Ogre::SceneNode* parentNode);
+    void addRegulatoryElements(const lanelet::ConstLanelet& lanelet, Ogre::SceneNode* parentNode);
 
-    ogre_helper::Line ogreLineFromLLetPts(const std::vector<LLet::point_with_id_t>& ptsVector);
-    Ogre::Vector3 ogreVec3FromLatLon(double lat, double lon);
-    Ogre::Vector3 ogreVec3FromLLetPoint(LLet::point_with_id_t point);
+    ogre_helper::Line ogreLineFromLLetLineString(lanelet::ConstLineString3d& lineString);
+    ogre_helper::Line ogreLineFromLLetPts(lanelet::ConstPoints3d& ptsVector);
+    Ogre::Vector3 ogreVec3FromLLetPoint(lanelet::ConstPoint3d point);
 
     std::vector<ClassifiedMovableObject> objects_;
     Ogre::SceneManager* sceneManager_;
     Ogre::SceneNode* sceneNode_;
 
     Ogre::MaterialPtr material_;
-
-    std::shared_ptr<util_geo_coordinates::CoordinateTransformRos> coordinateTransformPtr_;
-    double latLonOriginX_, latLonOriginY_;
 
     // line settings
     const Ogre::ColourValue colorLeft_ = Ogre::ColourValue(1.0, 0.0, 0.0, 1.0);      // red
