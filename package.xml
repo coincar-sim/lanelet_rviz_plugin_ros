@@ -21,7 +21,6 @@
 
   <depend>rviz</depend>
   <depend>mrt_qt-dev</depend>
-  <depend>geodesy</depend>
   <depend>boost</depend>
   <depend>util_rviz</depend>
 
