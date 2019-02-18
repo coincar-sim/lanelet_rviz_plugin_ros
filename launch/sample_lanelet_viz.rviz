@@ -21,6 +21,7 @@ Panels:
   - Class: rviz/Views
     Expanded:
       - /Current View1
+      - /Current View1/Focal Point1
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz/Time
@@ -51,9 +52,7 @@ Visualization Manager:
       Value: false
     - Class: lanelet_rviz_plugin_ros::LaneletMapPlugin
       Enabled: true
-      Map-File: ${/lanelet_map_filename}
       Name: LaneletMapPlugin
-      NavSatFix Topic: /nav_sat_fix_topic
       Value: true
       Visibility of Map:
         Linewidth: 0.300000012
@@ -88,25 +87,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 178.214111
+      Distance: 227.044769
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 64.1966476
-        Y: 1.51377857
-        Z: -10.2941189
-      Focal Shape Fixed Size: true
+        X: 506.589172
+        Y: -1271.90332
+        Z: 0
+      Focal Shape Fixed Size: false
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 1.16539752
+      Pitch: 1.15979671
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.5253973
+      Yaw: 0.935398102
     Saved: ~
 Window Geometry:
   Displays:

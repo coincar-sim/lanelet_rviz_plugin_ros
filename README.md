@@ -8,10 +8,10 @@ Rviz Plugin for displaying a [lanelet2](https://github.com/fzi-forschungszentrum
 
 ## Usage
 * Start rviz and add the plugin.
-* Lanelet-Map-File (`*.osm`-File) must be specified. Ros parameters are allowed (${myparam}).
-* A reference frame and its origin geo coordinates (latitude/longitude) must be given via a NavSatFix-Message
+* The lanelet2 map file must be specified via `lanelet2_interface_ros`.
 * Visibility of the map and sub-elements (e.g. LineStrip-Seperators) can be toggled, without reloading the whole map.
-* launch `$ roslaunch lanelet_rviz_plugin_ros sample_lanelet_viz.launch` for an example
+* Launch `$ roslaunch lanelet_rviz_plugin_ros sample_lanelet_viz.launch` for an example.
+* *Note:* For large lanelet2 maps, loading the map takes some seconds, which slows down the rviz initialization.
 
 ## Contributors
 Pascal Böhmler, Alexander Naumann, Maximilian Naumann
