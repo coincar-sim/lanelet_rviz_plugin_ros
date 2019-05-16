@@ -1,3 +1,5 @@
+[![Build Status](https://api.travis-ci.org/coincar-sim/lanelet_rviz_plugin_ros.svg)](https://travis-ci.org/coincar-sim/lanelet_rviz_plugin_ros)
+
 # lanelet_rviz_plugin_ros
 Rviz Plugin for displaying a [lanelet2](https://github.com/fzi-forschungszentrum-informatik/Lanelet2) map.
 
