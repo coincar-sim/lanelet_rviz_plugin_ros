@@ -31,6 +31,6 @@
 
 
   <export>
-    <rviz plugin="${prefix}/plugin_map_description.xml"/>
+    <rviz plugin="${prefix}/plugin_description.xml"/>
   </export>
 </package>
