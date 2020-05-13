@@ -38,11 +38,18 @@ namespace lanelet_rviz_plugin_ros {
 MapElement::MapElement(Ogre::SceneManager* scene_manager,
                        Ogre::SceneNode* parent_node,
                        lanelet::LaneletMapConstPtr theMap,
+                       double characterHeight,
                        double laneletWidth,
                        double seperatorWidth,
-                       double stopLineWidth)
-        : sceneManager_(scene_manager), sceneNode_(parent_node->createChildSceneNode()), laneletWidth_(laneletWidth),
-          seperatorWidth_(seperatorWidth), stopLineWidth_(stopLineWidth) {
+                       double stopLineWidth,
+                       Ogre::ColourValue colorLeft,
+                       Ogre::ColourValue colorRight,
+                       Ogre::ColourValue colorStopLine,
+                       Ogre::ColourValue colorSeperator)
+        : sceneManager_(scene_manager), sceneNode_(parent_node->createChildSceneNode()),
+          characterHeight_(characterHeight), laneletWidth_(laneletWidth), seperatorWidth_(seperatorWidth),
+          stopLineWidth_(stopLineWidth), colorLeft_(colorLeft), colorRight_(colorRight), colorStopLine_(colorStopLine),
+          colorSeperator_(colorSeperator) {
     if (!ogreInitialized_) {
         // create Material
         material_ = ogre_helper::getMaterial("lanelet_material");
@@ -234,12 +241,17 @@ void MapElement::attachLaneletIdToSceneNode(const lanelet::ConstLanelet& lanelet
     Ogre::SceneNode* childNode = parentNode->createChildSceneNode();
 
     rviz::MovableText* msg = new rviz::MovableText(std::to_string(lanelet.id()));
-    msg->setCharacterHeight(2.0); // TODO: create property and read from the property
+    msg->setCharacterHeight(characterHeight_);
     msg->setColor(Ogre::ColourValue::White);
     msg->setTextAlignment(rviz::MovableText::H_CENTER, rviz::MovableText::V_ABOVE); // Center horizontally and
                                                                                     // display above the node
 
-    Ogre::Vector3 trans = ogreVec3FromLLetPoint(lanelet.leftBound().front());
+    lanelet::ConstPoint3d text_pos(lanelet::utils::getId(),
+                                   lanelet.centerline()[(int)lanelet.centerline().size() / 2].x(),
+                                   lanelet.centerline()[(int)lanelet.centerline().size() / 2].y(),
+                                   -0.2);
+
+    Ogre::Vector3 trans = ogreVec3FromLLetPoint(text_pos);
     util_rviz::setPositionSafely(childNode, trans);
 
     childNode->attachObject(msg);

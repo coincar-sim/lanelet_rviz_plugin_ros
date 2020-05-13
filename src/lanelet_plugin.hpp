@@ -42,6 +42,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <rviz/properties/bool_property.h>
 #include <rviz/properties/float_property.h>
+#include <rviz/properties/color_property.h>
 
 #include "map_element.hpp"
 
@@ -67,7 +68,7 @@ protected:
 private Q_SLOTS:
     void visibilityPropertyChanged();
     void referenceFrameChanged();
-    void lineWidthChanged();
+    void reloadMap();
 
 private:
     void clear();
@@ -87,8 +88,13 @@ private:
     rviz::BoolProperty idVisibilityProperty_;
     rviz::BoolProperty seperatorVisibilityProperty_;
     rviz::BoolProperty regElementVisibilityProperty_;
+    rviz::FloatProperty characterHeightProperty_;
     rviz::FloatProperty laneletWidthProperty_;
     rviz::FloatProperty seperatorWidthProperty_;
     rviz::FloatProperty stopLineWidthProperty_;
+    rviz::ColorProperty laneletLeftBoundColorProperty_;
+    rviz::ColorProperty laneletRightBoundColorProperty_;
+    rviz::ColorProperty stopLineColorProperty_;
+    rviz::ColorProperty seperatorColorProperty_;
 };
 } // namespace lanelet_rviz_plugin_ros

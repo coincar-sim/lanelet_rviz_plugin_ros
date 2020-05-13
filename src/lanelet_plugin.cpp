@@ -84,24 +84,54 @@ LaneletMapPlugin::LaneletMapPlugin()
                                         &mapVisibilityProperty_,
                                         SLOT(visibilityPropertyChanged()),
                                         this),
-          laneletWidthProperty_("Linewidth",
-                                0.3,
-                                "Linewidth (green and red lines)",
-                                &mapVisibilityProperty_,
-                                SLOT(lineWidthChanged()),
-                                this),
+          characterHeightProperty_("Character Height",
+                                 1.0,
+                                 "Character Height",
+                                 &mapVisibilityProperty_,
+                                 SLOT(reloadMap()),
+                                 this),
+          laneletWidthProperty_("Linewidth Boundaries",
+                                 0.3,
+                                 "Linewidth of Lanelet Boundaries",
+                                 &mapVisibilityProperty_,
+                                 SLOT(reloadMap()),
+                                 this),
           seperatorWidthProperty_("Linewidth Separators",
                                   0.3,
-                                  "Linewidth of Lanelet Separators (blue lines)",
+                                  "Linewidth of Lanelet Separators",
                                   &mapVisibilityProperty_,
-                                  SLOT(lineWidthChanged()),
+                                  SLOT(reloadMap()),
                                   this),
           stopLineWidthProperty_("Linewidth Stop Lines",
                                  0.3,
-                                 "Linewidth of Stop Lines (red lines)",
+                                 "Linewidth of Stop Lines",
                                  &mapVisibilityProperty_,
-                                 SLOT(lineWidthChanged()),
-                                 this) {
+                                 SLOT(reloadMap()),
+                                 this),
+          laneletLeftBoundColorProperty_("Color Left Boundaries",
+                                         QColor(120, 120, 120, 170),
+                                         "Color of Left Boundaries",
+                                         &mapVisibilityProperty_,
+                                         SLOT(reloadMap()),
+                                         this),
+          laneletRightBoundColorProperty_("Color Right Boundaries",
+                                          QColor(120, 120, 120, 170),
+                                          "Color of Right Boundaries",
+                                          &mapVisibilityProperty_,
+                                          SLOT(reloadMap()),
+                                          this),
+          stopLineColorProperty_("Color Stop Lines",
+                                  QColor(250, 10, 10, 255),
+                                  "Color of Stop Lines",
+                                  &mapVisibilityProperty_,
+                                  SLOT(reloadMap()),
+                                  this),
+          seperatorColorProperty_("Color Separators",
+                                  QColor(25, 75, 250, 180),
+                                  "Color of Lanelet Separators",
+                                  &mapVisibilityProperty_,
+                                  SLOT(reloadMap()),
+                                  this) {
 }
 
 LaneletMapPlugin::~LaneletMapPlugin() {
@@ -171,9 +201,14 @@ void LaneletMapPlugin::createMapObject() {
         mapElement_ = std::make_unique<MapElement>(scene_manager_,
                                                    scene_node_origin_frame,
                                                    theMapPtr_,
+                                                   static_cast<double>(characterHeightProperty_.getFloat()),
                                                    static_cast<double>(laneletWidthProperty_.getFloat()),
                                                    static_cast<double>(seperatorWidthProperty_.getFloat()),
-                                                   static_cast<double>(stopLineWidthProperty_.getFloat()));
+                                                   static_cast<double>(stopLineWidthProperty_.getFloat()),
+                                                   laneletLeftBoundColorProperty_.getOgreColor(),
+                                                   laneletRightBoundColorProperty_.getOgreColor(),
+                                                   stopLineColorProperty_.getOgreColor(),
+                                                   seperatorColorProperty_.getOgreColor());
 
         Ogre::Vector3 origin = scene_node_origin_frame->convertLocalToWorldPosition(Ogre::Vector3{0., 0., 0.});
         ROS_DEBUG("RVIZ:lanelet_plugin: Map loaded. Origin frame (\"%s\")is at x=%f, y=%f in the fixed frame",
@@ -221,7 +256,7 @@ void LaneletMapPlugin::visibilityPropertyChanged() {
     }
 }
 
-void LaneletMapPlugin::lineWidthChanged() {
+void LaneletMapPlugin::reloadMap() {
     clear();
     loadMap();
 }

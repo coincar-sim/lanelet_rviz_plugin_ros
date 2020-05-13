@@ -72,9 +72,14 @@ public:
     MapElement(Ogre::SceneManager* scene_manager,
                Ogre::SceneNode* parent_node,
                lanelet::LaneletMapConstPtr theMap,
+               double characterHeight = 1.0,
                double laneletWidth = 1.0,
                double seperatorWidth = 0.5,
-               double stopLineWidth = 0.5);
+               double stopLineWidth = 0.5,
+               Ogre::ColourValue colorLeft_ = Ogre::ColourValue(0.4, 0.4, 0.4, 0.8),       // gray
+               Ogre::ColourValue colorRight_ = Ogre::ColourValue(0.4, 0.4, 0.4, 0.8),      // gray
+               Ogre::ColourValue colorStopLine_ = Ogre::ColourValue(1.0, 0.1, 0.1, 1.0),   // red
+               Ogre::ColourValue colorSeperator_ = Ogre::ColourValue(0.1, 0.1, 0.9, 0.8)); // blue
     virtual ~MapElement();
 
     void disable();
@@ -105,10 +110,11 @@ private:
     Ogre::MaterialPtr material_;
 
     // line settings
-    const Ogre::ColourValue colorLeft_ = Ogre::ColourValue(1.0, 0.0, 0.0, 1.0);      // red
-    const Ogre::ColourValue colorRight_ = Ogre::ColourValue(0.0, 1.0, 0.0, 1.0);     // green
-    const Ogre::ColourValue colorSeperator_ = Ogre::ColourValue(0.0, 0.0, 1.0, 1.0); // blue
-    const Ogre::ColourValue colorStopLine_ = Ogre::ColourValue(1.0, 0.0, 0.0, 1.0);  // red
+    const Ogre::ColourValue colorLeft_;
+    const Ogre::ColourValue colorRight_;
+    const Ogre::ColourValue colorSeperator_;
+    const Ogre::ColourValue colorStopLine_;
+    double characterHeight_;
     double laneletWidth_;
     double seperatorWidth_;
     double stopLineWidth_;
