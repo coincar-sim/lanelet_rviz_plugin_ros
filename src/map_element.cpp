@@ -38,18 +38,9 @@ namespace lanelet_rviz_plugin_ros {
 MapElement::MapElement(Ogre::SceneManager* scene_manager,
                        Ogre::SceneNode* parent_node,
                        lanelet::LaneletMapConstPtr theMap,
-                       double characterHeight,
-                       double laneletWidth,
-                       double seperatorWidth,
-                       double stopLineWidth,
-                       Ogre::ColourValue colorLeft,
-                       Ogre::ColourValue colorRight,
-                       Ogre::ColourValue colorStopLine,
-                       Ogre::ColourValue colorSeperator)
+                       const VisualizationOptions& visualizationOptions)
         : sceneManager_(scene_manager), sceneNode_(parent_node->createChildSceneNode()),
-          characterHeight_(characterHeight), laneletWidth_(laneletWidth), seperatorWidth_(seperatorWidth),
-          stopLineWidth_(stopLineWidth), colorLeft_(colorLeft), colorRight_(colorRight), colorStopLine_(colorStopLine),
-          colorSeperator_(colorSeperator) {
+          visualizationOptions_(visualizationOptions) {
     if (!ogreInitialized_) {
         // create Material
         material_ = ogre_helper::getMaterial("lanelet_material");
@@ -226,7 +217,8 @@ void MapElement::attachRefLinesToSceneNode(std::vector<lanelet::ConstLineString3
     stopLinesManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
     for (auto&& stopLine : stopLines) {
         auto line = MapElement::ogreLineFromLLetLineString(stopLine);
-        ogre_helper::drawLine(line, stopLinesManualObject, colorStopLine_, stopLineWidth_);
+        ogre_helper::drawLine(
+            line, stopLinesManualObject, visualizationOptions_.colorStopLine, visualizationOptions_.stopLineWidth);
     }
     if (stopLinesManualObject->getNumSections()) {
         parentNode->attachObject(stopLinesManualObject);
@@ -241,7 +233,7 @@ void MapElement::attachLaneletIdToSceneNode(const lanelet::ConstLanelet& lanelet
     Ogre::SceneNode* childNode = parentNode->createChildSceneNode();
 
     rviz::MovableText* msg = new rviz::MovableText(std::to_string(lanelet.id()));
-    msg->setCharacterHeight(characterHeight_);
+    msg->setCharacterHeight(visualizationOptions_.characterHeight);
     msg->setColor(Ogre::ColourValue::White);
     msg->setTextAlignment(rviz::MovableText::H_CENTER, rviz::MovableText::V_ABOVE); // Center horizontally and
                                                                                     // display above the node
@@ -263,12 +255,12 @@ void MapElement::addLaneletToManualObject(const lanelet::ConstLanelet& lanelet, 
     auto leftbound = lanelet.leftBound();
     auto lineLeft = ogreLineFromLLetLineString(leftbound);
     // draw line as Ogre Object
-    ogre_helper::drawLine(lineLeft, manual, colorLeft_, laneletWidth_);
+    ogre_helper::drawLine(lineLeft, manual, visualizationOptions_.colorLeft, visualizationOptions_.laneletWidth);
     // get line from right Linestrip points
     auto rightbound = lanelet.rightBound();
     auto lineRight = ogreLineFromLLetLineString(rightbound);
     // draw line as Ogre Object
-    ogre_helper::drawLine(lineRight, manual, colorRight_, laneletWidth_);
+    ogre_helper::drawLine(lineRight, manual, visualizationOptions_.colorRight, visualizationOptions_.laneletWidth);
 }
 
 
@@ -280,7 +272,7 @@ void MapElement::addSeperatorToManualObject(const lanelet::ConstLanelet& lanelet
     pointsF.push_back(lanelet.rightBound().front());
     // draw line as Ogre Object
     auto line = ogreLineFromLLetPts(pointsF);
-    ogre_helper::drawLine(line, manual, colorSeperator_, seperatorWidth_);
+    ogre_helper::drawLine(line, manual, visualizationOptions_.colorSeperator, visualizationOptions_.seperatorWidth);
 
     // get line from last Point of the left Linestrip to the last Point of the
     // right Linestrip
@@ -289,7 +281,7 @@ void MapElement::addSeperatorToManualObject(const lanelet::ConstLanelet& lanelet
     pointsF.push_back(lanelet.rightBound().front());
     // draw line as Ogre Object
     line = ogreLineFromLLetPts(pointsL);
-    ogre_helper::drawLine(line, manual, colorSeperator_, seperatorWidth_);
+    ogre_helper::drawLine(line, manual, visualizationOptions_.colorSeperator, visualizationOptions_.seperatorWidth);
 }
 
 

@@ -191,17 +191,15 @@ void LaneletMapPlugin::createMapObject() {
         Ogre::SceneNode* scene_node_origin_frame;
         scene_node_origin_frame = getChildSceneNodeAtFrameId(tfBuffer_, context_, scene_node_, originFrameId_);
         // create Map Element. It is attached to the scene_node on creation
-        mapElement_ = std::make_unique<MapElement>(scene_manager_,
-                                                   scene_node_origin_frame,
-                                                   theMapPtr_,
-                                                   static_cast<double>(characterHeightProperty_.getFloat()),
-                                                   static_cast<double>(laneletWidthProperty_.getFloat()),
-                                                   static_cast<double>(seperatorWidthProperty_.getFloat()),
-                                                   static_cast<double>(stopLineWidthProperty_.getFloat()),
-                                                   laneletLeftBoundColorProperty_.getOgreColor(),
-                                                   laneletRightBoundColorProperty_.getOgreColor(),
-                                                   stopLineColorProperty_.getOgreColor(),
-                                                   seperatorColorProperty_.getOgreColor());
+        VisualizationOptions visOptions{static_cast<double>(characterHeightProperty_.getFloat()),
+                                        static_cast<double>(laneletWidthProperty_.getFloat()),
+                                        static_cast<double>(seperatorWidthProperty_.getFloat()),
+                                        static_cast<double>(stopLineWidthProperty_.getFloat()),
+                                        laneletLeftBoundColorProperty_.getOgreColor(),
+                                        laneletRightBoundColorProperty_.getOgreColor(),
+                                        stopLineColorProperty_.getOgreColor(),
+                                        seperatorColorProperty_.getOgreColor()};
+        mapElement_ = std::make_unique<MapElement>(scene_manager_, scene_node_origin_frame, theMapPtr_, visOptions);
 
         Ogre::Vector3 origin = scene_node_origin_frame->convertLocalToWorldPosition(Ogre::Vector3{0., 0., 0.});
         ROS_DEBUG("RVIZ:lanelet_plugin: Map loaded. Origin frame (\"%s\")is at x=%f, y=%f in the fixed frame",
