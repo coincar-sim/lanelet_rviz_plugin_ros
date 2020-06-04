@@ -239,8 +239,8 @@ void MapElement::attachLaneletIdToSceneNode(const lanelet::ConstLanelet& lanelet
                                                                                     // display above the node
 
     lanelet::ConstPoint3d text_pos(lanelet::utils::getId(),
-                                   lanelet.centerline()[(int)lanelet.centerline().size() / 2].x(),
-                                   lanelet.centerline()[(int)lanelet.centerline().size() / 2].y(),
+                                   lanelet.centerline()[lanelet.centerline().size() / 2].x(),
+                                   lanelet.centerline()[lanelet.centerline().size() / 2].y(),
                                    -0.2);
 
     Ogre::Vector3 trans = ogreVec3FromLLetPoint(text_pos);
