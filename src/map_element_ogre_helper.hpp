@@ -136,7 +136,7 @@ inline void drawMonoPolygon(const MonoPolygon& poly,
         count++;
     }
 }
-} // end of anonymous namespace for helper functions
+} // namespace
 
 inline void drawLine(const Line& line, ManualObject* obj, ColourValue color = ColourValue::White, double width = 0.1) {
     if (width <= 0)

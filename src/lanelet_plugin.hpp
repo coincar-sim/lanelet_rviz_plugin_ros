@@ -41,8 +41,8 @@
 #include <rviz/frame_manager.h>
 #include <tf2_ros/transform_listener.h>
 #include <rviz/properties/bool_property.h>
-#include <rviz/properties/float_property.h>
 #include <rviz/properties/color_property.h>
+#include <rviz/properties/float_property.h>
 
 #include "map_element.hpp"
 
