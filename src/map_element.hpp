@@ -76,10 +76,10 @@ public:
                double laneletWidth = 1.0,
                double seperatorWidth = 0.5,
                double stopLineWidth = 0.5,
-               Ogre::ColourValue colorLeft_ = Ogre::ColourValue(0.4, 0.4, 0.4, 0.8),       // gray
-               Ogre::ColourValue colorRight_ = Ogre::ColourValue(0.4, 0.4, 0.4, 0.8),      // gray
-               Ogre::ColourValue colorStopLine_ = Ogre::ColourValue(1.0, 0.1, 0.1, 1.0),   // red
-               Ogre::ColourValue colorSeperator_ = Ogre::ColourValue(0.1, 0.1, 0.9, 0.8)); // blue
+               Ogre::ColourValue colorLeft = Ogre::ColourValue(0.4, 0.4, 0.4, 0.8),       // gray
+               Ogre::ColourValue colorRight = Ogre::ColourValue(0.4, 0.4, 0.4, 0.8),      // gray
+               Ogre::ColourValue colorStopLine = Ogre::ColourValue(1.0, 0.1, 0.1, 1.0),   // red
+               Ogre::ColourValue colorSeperator = Ogre::ColourValue(0.1, 0.1, 0.9, 0.8)); // blue
     virtual ~MapElement();
 
     void disable();
