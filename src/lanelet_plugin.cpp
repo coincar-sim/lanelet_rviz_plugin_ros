@@ -140,8 +140,7 @@ void LaneletMapPlugin::onInitialize() {
 }
 
 void LaneletMapPlugin::onEnable() {
-    clear();
-    loadMap();
+    reloadMap();
 }
 
 void LaneletMapPlugin::onDisable() {
@@ -156,8 +155,7 @@ void LaneletMapPlugin::clear() {
 void LaneletMapPlugin::fixedFrameChanged() {
     // Call Base Class method
     Display::fixedFrameChanged();
-    clear();
-    loadMap();
+    reloadMap();
 }
 
 void LaneletMapPlugin::loadMap() {
@@ -222,8 +220,7 @@ void LaneletMapPlugin::createMapObject() {
 }
 
 void LaneletMapPlugin::referenceFrameChanged() {
-    clear();
-    loadMap();
+    reloadMap();
 }
 
 void LaneletMapPlugin::visibilityPropertyChanged() {
