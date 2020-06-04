@@ -170,17 +170,20 @@ void LaneletMapPlugin::loadMap() {
  * Load Map and and attach visible Map-Object to the scene_node.
  */
 void LaneletMapPlugin::createMapObject() {
-    // try to load map
-    try {
-        ROS_INFO("LaneletMapPlugin: retrieving map from lanelet2_interface_ros...");
-        lanelet2_interface_ros::Lanelet2InterfaceRos ll2if;
-        theMapPtr_ = ll2if.waitForMapPtr(10, 0.5);
-        originFrameId_ = ll2if.waitForFrameIdMap(10, 0.1);
-    } catch (std::exception& e) {
-        setStatus(rviz::StatusProperty::Error,
-                  QString("Map"),
-                  QString("Error during map loading with lanelet2_interface_ros: ") + e.what());
-        return;
+
+    if (!theMapPtr_) {
+        // try to load map
+        try {
+            ROS_INFO("LaneletMapPlugin: retrieving map from lanelet2_interface_ros...");
+            lanelet2_interface_ros::Lanelet2InterfaceRos ll2if;
+            theMapPtr_ = ll2if.waitForMapPtr(10, 0.5);
+            originFrameId_ = ll2if.waitForFrameIdMap(10, 0.1);
+        } catch (std::exception& e) {
+            setStatus(rviz::StatusProperty::Error,
+                      QString("Map"),
+                      QString("Error during map loading with lanelet2_interface_ros: ") + e.what());
+            return;
+        }
     }
 
     // try to create map element
