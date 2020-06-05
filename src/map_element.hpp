@@ -59,6 +59,17 @@ struct LatLonOrigin {
     double lon;
 };
 
+struct VisualizationOptions {
+    double characterHeight{1.0};
+    double laneletWidth = {1.0};
+    double seperatorWidth = {0.5};
+    double stopLineWidth = {0.5};
+    Ogre::ColourValue colorLeft{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};      // gray
+    Ogre::ColourValue colorRight{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};     // gray
+    Ogre::ColourValue colorStopLine{Ogre::ColourValue(1.0, 0.1, 0.1, 1.0)};  // red
+    Ogre::ColourValue colorSeperator{Ogre::ColourValue(0.1, 0.1, 0.9, 0.8)}; // blue
+};
+
 enum ObjectClassification { UNKOWN, MAP, LANELETID, SEPERATOR, REGULATORYELEMENT, STOPLINE, SPEEDLIMIT };
 // List of possible Object Classifications
 static const ObjectClassification regElementClassifications[] = {
@@ -72,9 +83,7 @@ public:
     MapElement(Ogre::SceneManager* scene_manager,
                Ogre::SceneNode* parent_node,
                lanelet::LaneletMapConstPtr theMap,
-               double laneletWidth = 1.0,
-               double seperatorWidth = 0.5,
-               double stopLineWidth = 0.5);
+               const VisualizationOptions& visualizationOptions);
     virtual ~MapElement();
 
     void disable();
@@ -104,14 +113,7 @@ private:
 
     Ogre::MaterialPtr material_;
 
-    // line settings
-    const Ogre::ColourValue colorLeft_ = Ogre::ColourValue(1.0, 0.0, 0.0, 1.0);      // red
-    const Ogre::ColourValue colorRight_ = Ogre::ColourValue(0.0, 1.0, 0.0, 1.0);     // green
-    const Ogre::ColourValue colorSeperator_ = Ogre::ColourValue(0.0, 0.0, 1.0, 1.0); // blue
-    const Ogre::ColourValue colorStopLine_ = Ogre::ColourValue(1.0, 0.0, 0.0, 1.0);  // red
-    double laneletWidth_;
-    double seperatorWidth_;
-    double stopLineWidth_;
+    const VisualizationOptions visualizationOptions_;
 };
 
 } // namespace lanelet_rviz_plugin_ros
