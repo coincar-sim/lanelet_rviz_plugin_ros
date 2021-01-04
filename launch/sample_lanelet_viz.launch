@@ -3,7 +3,12 @@
   <!-- Set the lanelet2 map -->
   <include file="$(find lanelet2_interface_ros)/launch/set_lanelet_map.launch">
     <arg name="map_file_name" value="$(find lanelet2_maps)/res/mapping_example.osm" />
+    <arg name="lat_origin" value="49.01452" />
+    <arg name="lon_origin" value="8.4171937" />
   </include>
+
+  <!-- Define point instead of comma as decimal seperator -->
+  <env name="LC_NUMERIC" value="en_US.UTF-8"/>
 
   <!-- start rviz -->
   <node pkg="rviz" type="rviz" name="my_rviz" args="-d $(find lanelet_rviz_plugin_ros)/launch/sample_lanelet_viz.rviz" output="screen" />
