@@ -78,6 +78,32 @@ LaneletMapPlugin::LaneletMapPlugin()
                                        &mapVisibilityProperty_,
                                        SLOT(visibilityPropertyChanged()),
                                        this),
+          areaVisibilityProperty_("Visibility of non-Parking Areas",
+                                  true,
+                                  "",
+                                  &mapVisibilityProperty_,
+                                  SLOT(visibilityPropertyChanged()),
+                                  this),
+          parkingVisibilityProperty_("Visibility of Parking Areas",
+                                     true,
+                                     "",
+                                     &mapVisibilityProperty_,
+                                     SLOT(visibilityPropertyChanged()),
+                                     this),
+          areaFillProperty_("Fill out non-Parking Areas?", true, "", &mapVisibilityProperty_, SLOT(reloadMap()), this),
+          parkingFillProperty_("Fill out Parking Areas?", true, "", &mapVisibilityProperty_, SLOT(reloadMap()), this),
+          areaWidthProperty_("Border linewidth of non-Parking Areas",
+                             true,
+                             "Not relevant if filled out",
+                             &mapVisibilityProperty_,
+                             SLOT(reloadMap()),
+                             this),
+          parkingWidthProperty_("Border linewidth of Parking Areas",
+                                0.3,
+                                "Not relevant if filled out",
+                                &mapVisibilityProperty_,
+                                SLOT(reloadMap()),
+                                this),
           regElementVisibilityProperty_("Visibility of Regulatory Elements (e.g. Stop Lines)",
                                         true,
                                         "",
@@ -123,7 +149,19 @@ LaneletMapPlugin::LaneletMapPlugin()
                                   "Color of Lanelet Separators",
                                   &mapVisibilityProperty_,
                                   SLOT(reloadMap()),
-                                  this) {
+                                  this),
+          areaColorProperty_("Color non-Parking Areas",
+                             QColor(252, 175, 62, 180),
+                             "Color of Areas",
+                             &mapVisibilityProperty_,
+                             SLOT(reloadMap()),
+                             this),
+          parkingColorProperty_("Color Parking Areas",
+                                QColor(0, 85, 255, 180),
+                                "Color of Areas",
+                                &mapVisibilityProperty_,
+                                SLOT(reloadMap()),
+                                this) {
 }
 
 LaneletMapPlugin::~LaneletMapPlugin() {
@@ -193,12 +231,18 @@ void LaneletMapPlugin::createMapObject() {
         // create Map Element. It is attached to the scene_node on creation
         VisualizationOptions visOptions{static_cast<double>(characterHeightProperty_.getFloat()),
                                         static_cast<double>(laneletWidthProperty_.getFloat()),
+                                        areaFillProperty_.getBool(),
+                                        parkingFillProperty_.getBool(),
+                                        static_cast<double>(areaWidthProperty_.getFloat()),
+                                        static_cast<double>(parkingWidthProperty_.getFloat()),
                                         static_cast<double>(seperatorWidthProperty_.getFloat()),
                                         static_cast<double>(stopLineWidthProperty_.getFloat()),
                                         laneletLeftBoundColorProperty_.getOgreColor(),
                                         laneletRightBoundColorProperty_.getOgreColor(),
                                         stopLineColorProperty_.getOgreColor(),
-                                        seperatorColorProperty_.getOgreColor()};
+                                        seperatorColorProperty_.getOgreColor(),
+                                        areaColorProperty_.getOgreColor(),
+                                        parkingColorProperty_.getOgreColor()};
         mapElement_ = std::make_unique<MapElement>(scene_manager_, scene_node_origin_frame, theMapPtr_, visOptions);
 
         Ogre::Vector3 origin = scene_node_origin_frame->convertLocalToWorldPosition(Ogre::Vector3{0., 0., 0.});
@@ -232,6 +276,12 @@ void LaneletMapPlugin::visibilityPropertyChanged() {
             // check if sub-elements are disabled
             if (!idVisibilityProperty_.getBool()) {
                 mapElement_->disable(ObjectClassification::LANELETID);
+            }
+            if (!areaVisibilityProperty_.getBool()) {
+                mapElement_->disable(ObjectClassification::AREA);
+            }
+            if (!parkingVisibilityProperty_.getBool()) {
+                mapElement_->disable(ObjectClassification::PARKINGAREA);
             }
             if (!seperatorVisibilityProperty_.getBool()) {
                 mapElement_->disable(ObjectClassification::SEPERATOR);

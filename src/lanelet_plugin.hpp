@@ -86,15 +86,23 @@ private:
     // RVIZ-properties
     rviz::BoolProperty mapVisibilityProperty_;
     rviz::BoolProperty idVisibilityProperty_;
+    rviz::BoolProperty areaVisibilityProperty_;
+    rviz::BoolProperty parkingVisibilityProperty_;
+    rviz::BoolProperty areaFillProperty_;
+    rviz::BoolProperty parkingFillProperty_;
     rviz::BoolProperty seperatorVisibilityProperty_;
     rviz::BoolProperty regElementVisibilityProperty_;
     rviz::FloatProperty characterHeightProperty_;
     rviz::FloatProperty laneletWidthProperty_;
+    rviz::FloatProperty areaWidthProperty_;
+    rviz::FloatProperty parkingWidthProperty_;
     rviz::FloatProperty seperatorWidthProperty_;
     rviz::FloatProperty stopLineWidthProperty_;
     rviz::ColorProperty laneletLeftBoundColorProperty_;
     rviz::ColorProperty laneletRightBoundColorProperty_;
     rviz::ColorProperty stopLineColorProperty_;
     rviz::ColorProperty seperatorColorProperty_;
+    rviz::ColorProperty areaColorProperty_;
+    rviz::ColorProperty parkingColorProperty_;
 };
 } // namespace lanelet_rviz_plugin_ros

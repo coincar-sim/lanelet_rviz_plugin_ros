@@ -62,15 +62,31 @@ struct LatLonOrigin {
 struct VisualizationOptions {
     double characterHeight{1.0};
     double laneletWidth = {1.0};
+    bool fillArea = false;
+    bool fillParking = true;
+    double areaWidth = {0.3};
+    double parkingWidth = {0.3};
     double seperatorWidth = {0.5};
     double stopLineWidth = {0.5};
     Ogre::ColourValue colorLeft{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};      // gray
     Ogre::ColourValue colorRight{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};     // gray
     Ogre::ColourValue colorStopLine{Ogre::ColourValue(1.0, 0.1, 0.1, 1.0)};  // red
     Ogre::ColourValue colorSeperator{Ogre::ColourValue(0.1, 0.1, 0.9, 0.8)}; // blue
+    Ogre::ColourValue colorArea{Ogre::ColourValue(0.9, 0.5, 0.1, 0.6)};      // orange
+    Ogre::ColourValue colorParking{Ogre::ColourValue(0.0, 0.7, 0.3, 0.8)};   // green
 };
 
-enum ObjectClassification { UNKOWN, MAP, LANELETID, SEPERATOR, REGULATORYELEMENT, STOPLINE, SPEEDLIMIT };
+enum ObjectClassification {
+    UNKOWN,
+    MAP,
+    LANELETID,
+    AREA,
+    PARKINGAREA,
+    SEPERATOR,
+    REGULATORYELEMENT,
+    STOPLINE,
+    SPEEDLIMIT
+};
 // List of possible Object Classifications
 static const ObjectClassification regElementClassifications[] = {
     REGULATORYELEMENT, STOPLINE, SPEEDLIMIT}; // List of Classifications that
@@ -98,14 +114,19 @@ public:
 private:
     void visualizeMap(lanelet::LaneletMapConstPtr theMap);
     void addLaneletToManualObject(const lanelet::ConstLanelet& lanelet, Ogre::ManualObject* manual);
+    void addAreaToManualObject(const lanelet::ConstArea& area, Ogre::ManualObject* manual);
+    void addParkingAreaToManualObject(const lanelet::ConstArea& area, Ogre::ManualObject* manual);
     void addSeperatorToManualObject(const lanelet::ConstLanelet& lanelet, Ogre::ManualObject* manual);
     void attachRefLinesToSceneNode(std::vector<lanelet::ConstLineString3d>& stopLines, Ogre::SceneNode* parentNode);
     void attachLaneletIdToSceneNode(const lanelet::ConstLanelet& lanelet, Ogre::SceneNode* parentNode);
+    void attachAreaToSceneNode(const lanelet::ConstArea& area, Ogre::SceneNode* parentNode);
     void addRegulatoryElements(const lanelet::ConstLanelet& lanelet, Ogre::SceneNode* parentNode);
 
-    ogre_helper::Line ogreLineFromLLetLineString(lanelet::ConstLineString3d& lineString);
-    ogre_helper::Line ogreLineFromLLetPts(lanelet::ConstPoints3d& ptsVector);
-    Ogre::Vector3 ogreVec3FromLLetPoint(lanelet::ConstPoint3d point);
+
+    ogre_helper::Line ogreLineFromLLetLineString(const lanelet::ConstLineString3d& lineString) const;
+    ogre_helper::Line ogreLineFromLLetPolygon(const lanelet::CompoundPolygon3d& lineString) const;
+    ogre_helper::Line ogreLineFromLLetPts(const lanelet::ConstPoints3d& ptsVector) const;
+    Ogre::Vector3 ogreVec3FromLLetPoint(const lanelet::ConstPoint3d point) const;
 
     std::vector<ClassifiedMovableObject> objects_;
     Ogre::SceneManager* sceneManager_;

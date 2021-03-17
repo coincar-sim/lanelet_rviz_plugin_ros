@@ -81,6 +81,24 @@ MapElement::~MapElement() {
             break;
         }
 
+        case ObjectClassification::AREA: {
+            auto man_object = dynamic_cast<Ogre::ManualObject*>(object.second);
+            if (man_object) {
+                man_object->getParentSceneNode()->detachObject(man_object);
+                sceneManager_->destroyManualObject(man_object);
+            }
+            break;
+        }
+
+        case ObjectClassification::PARKINGAREA: {
+            auto man_object = dynamic_cast<Ogre::ManualObject*>(object.second);
+            if (man_object) {
+                man_object->getParentSceneNode()->detachObject(man_object);
+                sceneManager_->destroyManualObject(man_object);
+            }
+            break;
+        }
+
         case ObjectClassification::SEPERATOR: {
             auto man_object = dynamic_cast<Ogre::ManualObject*>(object.second);
             if (man_object) {
@@ -165,10 +183,16 @@ void MapElement::visualizeMap(lanelet::LaneletMapConstPtr theMap) {
         sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
     Ogre::ManualObject* seperatorManualObject =
         sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
+    Ogre::ManualObject* areaManualObject =
+        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
+    Ogre::ManualObject* parkingManualObject =
+        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
 
     // Attach Lanelet to manual object
     mapManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
     seperatorManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    areaManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    parkingManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
 
     // Iterate through all lanelets in map-graph
     for (const lanelet::ConstLanelet& lanelet : theMap->laneletLayer) {
@@ -177,9 +201,21 @@ void MapElement::visualizeMap(lanelet::LaneletMapConstPtr theMap) {
         addRegulatoryElements(lanelet, sceneNode_);
         attachLaneletIdToSceneNode(lanelet, sceneNode_);
     }
+    // Iterate through all area-elements(=multipolygon) in map-graph
+    for (const lanelet::ConstArea& area : theMap->areaLayer) {
+        auto attributes = area.attributes();
+        if (attributes[lanelet::AttributeName::Subtype] == lanelet::AttributeValueString::Parking) {
+            addParkingAreaToManualObject(area, parkingManualObject);
+        } else {
+            addAreaToManualObject(area, areaManualObject);
+        }
+    }
+
 
     mapManualObject->end();
     seperatorManualObject->end();
+    areaManualObject->end();
+    parkingManualObject->end();
 
     // attach manual object to scene node
     if (mapManualObject->getNumSections()) {
@@ -192,6 +228,18 @@ void MapElement::visualizeMap(lanelet::LaneletMapConstPtr theMap) {
         sceneNode_->attachObject(seperatorManualObject);
         // save ptr to manual object (needed later for deletion)
         objects_.push_back(std::make_pair(ObjectClassification::SEPERATOR, seperatorManualObject));
+    }
+
+    if (areaManualObject->getNumSections()) {
+        sceneNode_->attachObject(areaManualObject);
+        // save ptr to manual object (needed later for deletion)
+        objects_.push_back(std::make_pair(ObjectClassification::AREA, areaManualObject));
+    }
+
+    if (parkingManualObject->getNumSections()) {
+        sceneNode_->attachObject(parkingManualObject);
+        // save ptr to manual object (needed later for deletion)
+        objects_.push_back(std::make_pair(ObjectClassification::PARKINGAREA, parkingManualObject));
     }
 }
 
@@ -263,6 +311,37 @@ void MapElement::addLaneletToManualObject(const lanelet::ConstLanelet& lanelet, 
     ogre_helper::drawLine(lineRight, manual, visualizationOptions_.colorRight, visualizationOptions_.laneletWidth);
 }
 
+void MapElement::addAreaToManualObject(const lanelet::ConstArea& area, Ogre::ManualObject* manual) {
+    // get outer boundary of area
+    // auto outerbound = area.outerBound(); //would return a vector, therefore the conversion to polygon to get a
+    // lanelet-style ConstLineString3d
+
+    const lanelet::CompoundPolygon3d outerPolygon = area.outerBoundPolygon();
+    const auto arealine = ogreLineFromLLetPolygon(outerPolygon);
+
+    // draw polygon as Ogre Object
+    if (visualizationOptions_.fillArea) {
+        ogre_helper::drawArea(arealine, manual, visualizationOptions_.colorArea);
+    } else {
+        ogre_helper::drawLine(arealine, manual, visualizationOptions_.colorArea, visualizationOptions_.areaWidth);
+    }
+}
+
+void MapElement::addParkingAreaToManualObject(const lanelet::ConstArea& area, Ogre::ManualObject* manual) {
+    // get outer boundary of area
+    // auto outerbound = area.outerBound(); //would return a vector, therefore the conversion to polygon to get a
+    // lanelet-style ConstLineString3d
+
+    const lanelet::CompoundPolygon3d outerPolygon = area.outerBoundPolygon();
+    const auto arealine = ogreLineFromLLetPolygon(outerPolygon);
+
+    // draw polygon as Ogre Object
+    if (visualizationOptions_.fillParking) {
+        ogre_helper::drawArea(arealine, manual, visualizationOptions_.colorParking);
+    } else {
+        ogre_helper::drawLine(arealine, manual, visualizationOptions_.colorParking, visualizationOptions_.parkingWidth);
+    }
+}
 
 void MapElement::addSeperatorToManualObject(const lanelet::ConstLanelet& lanelet, Ogre::ManualObject* manual) {
     // get line from first Point of the left Linestrip to the first Point of the
@@ -285,7 +364,16 @@ void MapElement::addSeperatorToManualObject(const lanelet::ConstLanelet& lanelet
 }
 
 
-ogre_helper::Line MapElement::ogreLineFromLLetLineString(lanelet::ConstLineString3d& lineString) {
+ogre_helper::Line MapElement::ogreLineFromLLetLineString(const lanelet::ConstLineString3d& lineString) const {
+    ogre_helper::Line line;
+    for (lanelet::ConstPoint3d point : lineString) {
+        line.push_back(ogreVec3FromLLetPoint(point));
+    }
+    return line;
+}
+
+ogre_helper::Line MapElement::ogreLineFromLLetPolygon(const lanelet::CompoundPolygon3d& lineString) const {
+    // overloaded function to convert outer boundary of an area to an ogre::line
     ogre_helper::Line line;
     for (lanelet::ConstPoint3d point : lineString) {
         line.push_back(ogreVec3FromLLetPoint(point));
@@ -294,7 +382,7 @@ ogre_helper::Line MapElement::ogreLineFromLLetLineString(lanelet::ConstLineStrin
 }
 
 
-ogre_helper::Line MapElement::ogreLineFromLLetPts(lanelet::ConstPoints3d& ptsVector) {
+ogre_helper::Line MapElement::ogreLineFromLLetPts(const lanelet::ConstPoints3d& ptsVector) const {
     ogre_helper::Line line;
     for (lanelet::ConstPoint3d point : ptsVector) {
         line.push_back(ogreVec3FromLLetPoint(point));
@@ -303,7 +391,7 @@ ogre_helper::Line MapElement::ogreLineFromLLetPts(lanelet::ConstPoints3d& ptsVec
 }
 
 
-Ogre::Vector3 MapElement::ogreVec3FromLLetPoint(lanelet::ConstPoint3d point) {
+Ogre::Vector3 MapElement::ogreVec3FromLLetPoint(const lanelet::ConstPoint3d point) const {
     using boost::numeric_cast;
     using boost::numeric::bad_numeric_cast;
     return Ogre::Vector3(numeric_cast<Ogre::Real>(point.x()), numeric_cast<Ogre::Real>(point.y()), 0.f);
