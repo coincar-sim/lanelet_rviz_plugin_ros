@@ -9,8 +9,5 @@
     local-name: mrt_cmake_modules
     uri: https://github.com/KIT-MRT/mrt_cmake_modules.git
 - git:
-    local-name: rosinterface_handler
-    uri: https://github.com/KIT-MRT/rosinterface_handler.git
-- git:
     local-name: util_rviz
     uri: https://github.com/coincar-sim/util_rviz.git
