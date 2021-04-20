@@ -26,7 +26,7 @@ env:
     - DEPENDENCIES_ROSINSTALL=dependencies.rosinstall
 
 before_script:
-  - git clone -q https://github.com/coincar-sim/mrt_cmake_modules_ci.git .mrt_cmake_modules_ci
+  - git clone -q --branch update_compiler https://github.com/coincar-sim/mrt_cmake_modules_ci.git .mrt_cmake_modules_ci
 
 script:
   - .mrt_cmake_modules_ci/travis.sh
