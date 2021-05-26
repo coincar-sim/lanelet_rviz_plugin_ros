@@ -63,51 +63,11 @@ MapElement::~MapElement() {
     // detach and destroy all objects
     for (auto object : objects_) {
         switch (object.first) {
-        case ObjectClassification::MAP: {
-            auto man_object = dynamic_cast<Ogre::ManualObject*>(object.second);
-            if (man_object) {
-                man_object->getParentSceneNode()->detachObject(man_object);
-                sceneManager_->destroyManualObject(man_object);
-            }
-            break;
-        }
-
-        case ObjectClassification::LANELETID: {
-            auto mov_text = dynamic_cast<rviz::MovableText*>(object.second);
-            if (mov_text) {
-                mov_text->getParentSceneNode()->detachObject(mov_text);
-                delete mov_text;
-            }
-            break;
-        }
-
-        case ObjectClassification::AREA: {
-            auto man_object = dynamic_cast<Ogre::ManualObject*>(object.second);
-            if (man_object) {
-                man_object->getParentSceneNode()->detachObject(man_object);
-                sceneManager_->destroyManualObject(man_object);
-            }
-            break;
-        }
-
-        case ObjectClassification::PARKINGAREA: {
-            auto man_object = dynamic_cast<Ogre::ManualObject*>(object.second);
-            if (man_object) {
-                man_object->getParentSceneNode()->detachObject(man_object);
-                sceneManager_->destroyManualObject(man_object);
-            }
-            break;
-        }
-
-        case ObjectClassification::SEPERATOR: {
-            auto man_object = dynamic_cast<Ogre::ManualObject*>(object.second);
-            if (man_object) {
-                man_object->getParentSceneNode()->detachObject(man_object);
-                sceneManager_->destroyManualObject(man_object);
-            }
-            break;
-        }
-
+        case ObjectClassification::MAP:
+        case ObjectClassification::LANELETID:
+        case ObjectClassification::AREA:
+        case ObjectClassification::PARKINGAREA:
+        case ObjectClassification::SEPERATOR:
         case ObjectClassification::STOPLINE: {
             auto man_object = dynamic_cast<Ogre::ManualObject*>(object.second);
             if (man_object) {
