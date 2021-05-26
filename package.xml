@@ -1,11 +1,11 @@
-<?xml version="1.0"?>
+<?xml version='1.0' encoding='utf-8'?>
 <package format="2">
   <name>lanelet_rviz_plugin_ros</name>
   <version>1.0.0</version>
   <description>Rviz Plugin for displaying a lanelet map</description>
 
   <license>BSD</license>
-  <maintainer email="maximilian.naumann@kit.edu">Maximilian Naumann</maintainer>
+  <maintainer email="piotr.orzechowski@kit.edu">Piotr Orzechowski</maintainer>
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>mrt_cmake_modules</build_depend>
@@ -31,6 +31,6 @@
 
 
   <export>
-    <rviz plugin="${prefix}/plugin_description.xml"/>
+    <rviz plugin="${prefix}/plugin_description.xml" />
   </export>
 </package>
