@@ -138,6 +138,13 @@ inline void drawMonoPolygon(const MonoPolygon& poly,
 }
 } // namespace
 
+inline void drawArea(const Line& line, ManualObject* obj, ColourValue color = ColourValue::White) {
+    if (line.size() < 2) {
+        return;
+    }
+    drawMonoPolygon(line, obj, color);
+}
+
 inline void drawLine(const Line& line, ManualObject* obj, ColourValue color = ColourValue::White, double width = 0.1) {
     if (width <= 0)
         return;
