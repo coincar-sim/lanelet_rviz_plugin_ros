@@ -98,7 +98,6 @@ private:
     rviz::FloatProperty parkingWidthProperty_;
     rviz::FloatProperty seperatorWidthProperty_;
     rviz::FloatProperty stopLineWidthProperty_;
-    rviz::FloatProperty trafficLightWidthProperty_;
     rviz::FloatProperty trafficLightHeightProperty_;
     rviz::ColorProperty laneletLeftBoundColorProperty_;
     rviz::ColorProperty laneletRightBoundColorProperty_;
