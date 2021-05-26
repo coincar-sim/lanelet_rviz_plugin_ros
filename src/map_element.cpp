@@ -398,7 +398,7 @@ Ogre::Vector3 MapElement::ogreVec3FromLLetPointTrafficLights(const lanelet::Cons
     // sets z-value to an appropriat height in a projected 2D map
     return Ogre::Vector3(numeric_cast<Ogre::Real>(point.x()),
                          numeric_cast<Ogre::Real>(point.y()),
-                         numeric_cast<Ogre::Real>(point.z() + visualizationOptions_.trafficLightHeight));
+                         numeric_cast<Ogre::Real>(point.z() + visualizationOptions_.trafficLightHeightAboveGround));
 }
 
 } // namespace lanelet_rviz_plugin_ros

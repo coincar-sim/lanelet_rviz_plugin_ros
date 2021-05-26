@@ -71,7 +71,7 @@ struct VisualizationOptions {
     double parkingWidth = {0.3};
     double seperatorWidth = {0.5};
     double stopLineWidth = {0.5};
-    double trafficLightHeight = {-162.5};
+    double trafficLightHeightAboveGround = {-162.5};
     Ogre::ColourValue colorLeft{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};         // gray
     Ogre::ColourValue colorRight{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};        // gray
     Ogre::ColourValue colorStopLine{Ogre::ColourValue(1.0, 0.1, 0.1, 1.0)};     // red
