@@ -72,13 +72,13 @@ struct VisualizationOptions {
     double seperatorWidth = {0.5};
     double stopLineWidth = {0.5};
     double trafficLightHeight = {-162.5};
-    Ogre::ColourValue colorLeft{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};      // gray
-    Ogre::ColourValue colorRight{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};     // gray
-    Ogre::ColourValue colorStopLine{Ogre::ColourValue(1.0, 0.1, 0.1, 1.0)};  // red
+    Ogre::ColourValue colorLeft{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};         // gray
+    Ogre::ColourValue colorRight{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};        // gray
+    Ogre::ColourValue colorStopLine{Ogre::ColourValue(1.0, 0.1, 0.1, 1.0)};     // red
     Ogre::ColourValue colorTrafficLight{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)}; // gray
-    Ogre::ColourValue colorSeperator{Ogre::ColourValue(0.1, 0.1, 0.9, 0.8)}; // blue
-    Ogre::ColourValue colorArea{Ogre::ColourValue(0.9, 0.5, 0.1, 0.6)};      // orange
-    Ogre::ColourValue colorParking{Ogre::ColourValue(0.0, 0.7, 0.3, 0.8)};   // green
+    Ogre::ColourValue colorSeperator{Ogre::ColourValue(0.1, 0.1, 0.9, 0.8)};    // blue
+    Ogre::ColourValue colorArea{Ogre::ColourValue(0.9, 0.5, 0.1, 0.6)};         // orange
+    Ogre::ColourValue colorParking{Ogre::ColourValue(0.0, 0.7, 0.3, 0.8)};      // green
 };
 
 enum ObjectClassification {
@@ -96,8 +96,8 @@ enum ObjectClassification {
 // List of possible Object Classifications
 static const ObjectClassification regElementClassifications[] = {
     REGULATORYELEMENT, STOPLINE, TRAFFICLIGHT, SPEEDLIMIT}; // List of Classifications that
-                                              // are associated with regulatory
-                                              // Elements
+                                                            // are associated with regulatory
+                                                            // Elements
 using ClassifiedMovableObject = std::pair<ObjectClassification, Ogre::MovableObject*>;
 
 class MapElement {

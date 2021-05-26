@@ -253,9 +253,7 @@ void MapElement::attachTrafficLightsToSceneNode(const std::vector<lanelet::Const
     trafficLightManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
     for (auto&& trafficLight : trafficLights) {
         auto line = MapElement::ogreLineFromLLetLineString3D(trafficLight); // returns 3D line instead of projected 2D
-        ogre_helper::drawArea(line,
-                              trafficLightManualObject,
-                              visualizationOptions_.colorTrafficLight);
+        ogre_helper::drawArea(line, trafficLightManualObject, visualizationOptions_.colorTrafficLight);
     }
     if (trafficLightManualObject->getNumSections()) {
         parentNode->attachObject(trafficLightManualObject);
