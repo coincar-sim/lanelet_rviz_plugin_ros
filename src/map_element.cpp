@@ -179,12 +179,24 @@ void MapElement::visualizeMap(lanelet::LaneletMapConstPtr theMap) {
 
 
     // Create manual objects that will be attached to the scene-node
+    if (sceneManager_->hasManualObject("llet_object_" + std::to_string(manObjCounter_))) {
+        sceneManager_->destroyManualObject("llet_object_" + std::to_string(manObjCounter_));
+    }
     Ogre::ManualObject* mapManualObject =
         sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
+    if (sceneManager_->hasManualObject("llet_object_" + std::to_string(manObjCounter_))) {
+        sceneManager_->destroyManualObject("llet_object_" + std::to_string(manObjCounter_));
+    }
     Ogre::ManualObject* seperatorManualObject =
         sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
+    if (sceneManager_->hasManualObject("llet_object_" + std::to_string(manObjCounter_))) {
+        sceneManager_->destroyManualObject("llet_object_" + std::to_string(manObjCounter_));
+    }
     Ogre::ManualObject* areaManualObject =
         sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
+    if (sceneManager_->hasManualObject("llet_object_" + std::to_string(manObjCounter_))) {
+        sceneManager_->destroyManualObject("llet_object_" + std::to_string(manObjCounter_));
+    }
     Ogre::ManualObject* parkingManualObject =
         sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
 
