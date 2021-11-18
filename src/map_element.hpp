@@ -94,6 +94,8 @@ static const ObjectClassification regElementClassifications[] = {
                                               // Elements
 using ClassifiedMovableObject = std::pair<ObjectClassification, Ogre::MovableObject*>;
 
+static int manObjCounter{0};
+
 class MapElement {
 public:
     MapElement(Ogre::SceneManager* scene_manager,
@@ -108,7 +110,6 @@ public:
     void disable(ObjectClassification classification);
     void enable(ObjectClassification classification);
 
-    int manObjCounter_{0};
     bool ogreInitialized_{false}; // to check whether ogre settings have been applied
 
 private:
