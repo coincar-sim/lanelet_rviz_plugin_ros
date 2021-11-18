@@ -180,13 +180,13 @@ void MapElement::visualizeMap(lanelet::LaneletMapConstPtr theMap) {
 
     // Create manual objects that will be attached to the scene-node
     Ogre::ManualObject* mapManualObject =
-        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
+        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter++));
     Ogre::ManualObject* seperatorManualObject =
-        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
+        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter++));
     Ogre::ManualObject* areaManualObject =
-        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
+        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter++));
     Ogre::ManualObject* parkingManualObject =
-        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
+        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter++));
 
     // Attach Lanelet to manual object
     mapManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
@@ -261,7 +261,7 @@ void MapElement::attachRefLinesToSceneNode(std::vector<lanelet::ConstLineString3
     // Create Manual Object, RefLines will be created as Manual Object using the
     // ogre_helper::drawLine helper function
     Ogre::ManualObject* stopLinesManualObject =
-        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter_++));
+        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter++));
     stopLinesManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
     for (auto&& stopLine : stopLines) {
         auto line = MapElement::ogreLineFromLLetLineString(stopLine);
