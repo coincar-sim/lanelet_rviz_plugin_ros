@@ -30,6 +30,8 @@
 
 #include "map_element.hpp"
 
+#include <algorithm>
+
 #include <util_rviz/util_rviz.hpp>
 
 namespace lanelet_rviz_plugin_ros {
@@ -109,6 +111,15 @@ MapElement::~MapElement() {
         }
 
         case ObjectClassification::STOPLINE: {
+            auto man_object = dynamic_cast<Ogre::ManualObject*>(object.second);
+            if (man_object) {
+                man_object->getParentSceneNode()->detachObject(man_object);
+                sceneManager_->destroyManualObject(man_object);
+            }
+            break;
+        }
+
+        case ObjectClassification::TRAFFICLIGHT: {
             auto man_object = dynamic_cast<Ogre::ManualObject*>(object.second);
             if (man_object) {
                 man_object->getParentSceneNode()->detachObject(man_object);
@@ -248,11 +259,19 @@ void MapElement::addRegulatoryElements(const lanelet::ConstLanelet& lanelet, Ogr
     Ogre::SceneNode* regulatoryElementsNode = parentNode->createChildSceneNode();
     // get pointer to regulatory elements
     auto regulatoryElements = lanelet.regulatoryElements();
+    auto trafficLightRegelems = lanelet.regulatoryElementsAs<lanelet::TrafficLight>();
+
     // loop  over the regulatory elements
     for (auto&& regElement : regulatoryElements) {
         // Get reference lines
         auto refLines = regElement.get()->getParameters<lanelet::ConstLineString3d>(lanelet::RoleName::RefLine);
         attachRefLinesToSceneNode(refLines, regulatoryElementsNode);
+    }
+    // loop over traffic lights (RoleName::Refers applies also to speedlimits which are part of the above loop)
+    for (auto&& trafficLight : trafficLightRegelems) {
+        // ConstPolygon3d for Roadsigns pretend to be traffic lights, ConstLineString3d for actual traffic lights
+        auto trafficLights = trafficLight.get()->getParameters<lanelet::ConstPolygon3d>(lanelet::RoleName::Refers);
+        attachTrafficLightsToSceneNode(trafficLights, regulatoryElementsNode);
     }
 }
 
@@ -274,6 +293,25 @@ void MapElement::attachRefLinesToSceneNode(std::vector<lanelet::ConstLineString3
         objects_.push_back(std::make_pair(ObjectClassification::STOPLINE, stopLinesManualObject));
     }
     stopLinesManualObject->end();
+}
+
+void MapElement::attachTrafficLightsToSceneNode(std::vector<lanelet::ConstPolygon3d>& trafficLights,
+                                                Ogre::SceneNode* parentNode) {
+    // Create Manual Object, RefLines will be created as Manual Object using the
+    // ogre_helper::drawLine helper function
+    Ogre::ManualObject* trafficLightManualObject =
+        sceneManager_->createManualObject("llet_object_" + std::to_string(manObjCounter++));
+    trafficLightManualObject->begin("lanelet_material", Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    for (auto&& trafficLight : trafficLights) {
+        ogre_helper::Line line = MapElement::ogreLineFromLLetTrafficLight(trafficLight);
+        ogre_helper::drawArea(line, trafficLightManualObject, visualizationOptions_.colorTrafficLight);
+    }
+    if (trafficLightManualObject->getNumSections()) {
+        parentNode->attachObject(trafficLightManualObject);
+        // save ptr to manual object (needed later for deletion)
+        objects_.push_back(std::make_pair(ObjectClassification::TRAFFICLIGHT, trafficLightManualObject));
+    }
+    trafficLightManualObject->end();
 }
 
 void MapElement::attachLaneletIdToSceneNode(const lanelet::ConstLanelet& lanelet, Ogre::SceneNode* parentNode) {
@@ -372,15 +410,33 @@ ogre_helper::Line MapElement::ogreLineFromLLetLineString(const lanelet::ConstLin
     return line;
 }
 
-ogre_helper::Line MapElement::ogreLineFromLLetPolygon(const lanelet::CompoundPolygon3d& lineString) const {
-    // overloaded function to convert outer boundary of an area to an ogre::line
+ogre_helper::Line MapElement::ogreLineFromLLetPolygon(const lanelet::CompoundPolygon3d& polygon) const {
+    // overloaded function to convert outer boundary of an area to an oger::line
     ogre_helper::Line line;
-    for (lanelet::ConstPoint3d point : lineString) {
+    for (lanelet::ConstPoint3d point : polygon) {
         line.push_back(ogreVec3FromLLetPoint(point));
     }
     return line;
 }
 
+ogre_helper::Line MapElement::ogreLineFromLLetTrafficLight(const lanelet::ConstPolygon3d& polygon) const {
+    if (polygon.empty()) {
+        return {};
+    }
+
+    // overloaded function to convert outer boundary of an area to an oger::line
+    ogre_helper::Line line;
+    const lanelet::ConstPoint3d lowestPoint = *std::min_element(
+        polygon.begin(), polygon.end(), [](const lanelet::ConstPoint3d& p1, const lanelet::ConstPoint3d& p2) {
+            return p1.z() < p2.z();
+        });
+
+    for (lanelet::ConstPoint3d point : polygon) {
+        line.push_back(
+            ogreVec3FromLLetTrafficLight(point, visualizationOptions_.trafficLightHeightAboveGround - lowestPoint.z()));
+    }
+    return line;
+}
 
 ogre_helper::Line MapElement::ogreLineFromLLetPts(const lanelet::ConstPoints3d& ptsVector) const {
     ogre_helper::Line line;
@@ -395,6 +451,15 @@ Ogre::Vector3 MapElement::ogreVec3FromLLetPoint(const lanelet::ConstPoint3d poin
     using boost::numeric_cast;
     using boost::numeric::bad_numeric_cast;
     return Ogre::Vector3(numeric_cast<Ogre::Real>(point.x()), numeric_cast<Ogre::Real>(point.y()), 0.f);
+}
+
+Ogre::Vector3 MapElement::ogreVec3FromLLetTrafficLight(const lanelet::ConstPoint3d point, const double zOffset) const {
+    using boost::numeric_cast;
+    using boost::numeric::bad_numeric_cast;
+    // sets z-value to an appropriat height in a projected 2D map
+    return Ogre::Vector3(numeric_cast<Ogre::Real>(point.x()),
+                         numeric_cast<Ogre::Real>(point.y()),
+                         numeric_cast<Ogre::Real>(point.z() + zOffset));
 }
 
 } // namespace lanelet_rviz_plugin_ros

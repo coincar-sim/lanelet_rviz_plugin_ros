@@ -90,6 +90,12 @@ LaneletMapPlugin::LaneletMapPlugin()
                                      &mapVisibilityProperty_,
                                      SLOT(visibilityPropertyChanged()),
                                      this),
+          trafficLightVisibilityProperty_("Visibility of Traffic Light Boxes",
+                                          true,
+                                          "",
+                                          &mapVisibilityProperty_,
+                                          SLOT(visibilityPropertyChanged()),
+                                          this),
           areaFillProperty_("Fill out non-Parking Areas?", true, "", &mapVisibilityProperty_, SLOT(reloadMap()), this),
           parkingFillProperty_("Fill out Parking Areas?", true, "", &mapVisibilityProperty_, SLOT(reloadMap()), this),
           areaWidthProperty_("Border linewidth of non-Parking Areas",
@@ -104,6 +110,8 @@ LaneletMapPlugin::LaneletMapPlugin()
                                 &mapVisibilityProperty_,
                                 SLOT(reloadMap()),
                                 this),
+          trafficLightHeightAboveGroundProperty_(
+              "Height above ground of traffic lights", 3.0, "", &mapVisibilityProperty_, SLOT(reloadMap()), this),
           regElementVisibilityProperty_("Visibility of Regulatory Elements (e.g. Stop Lines)",
                                         true,
                                         "",
@@ -144,6 +152,12 @@ LaneletMapPlugin::LaneletMapPlugin()
                                  &mapVisibilityProperty_,
                                  SLOT(reloadMap()),
                                  this),
+          trafficLightColorProperty_("Color TrafficLights",
+                                     QColor(85, 87, 83, 255),
+                                     "Color of TrafficLights",
+                                     &mapVisibilityProperty_,
+                                     SLOT(reloadMap()),
+                                     this),
           seperatorColorProperty_("Color Separators",
                                   QColor(25, 75, 250, 180),
                                   "Color of Lanelet Separators",
@@ -235,11 +249,13 @@ void LaneletMapPlugin::createMapObject() {
                                         parkingFillProperty_.getBool(),
                                         static_cast<double>(areaWidthProperty_.getFloat()),
                                         static_cast<double>(parkingWidthProperty_.getFloat()),
+                                        static_cast<double>(trafficLightHeightAboveGroundProperty_.getFloat()),
                                         static_cast<double>(seperatorWidthProperty_.getFloat()),
                                         static_cast<double>(stopLineWidthProperty_.getFloat()),
                                         laneletLeftBoundColorProperty_.getOgreColor(),
                                         laneletRightBoundColorProperty_.getOgreColor(),
                                         stopLineColorProperty_.getOgreColor(),
+                                        trafficLightColorProperty_.getOgreColor(),
                                         seperatorColorProperty_.getOgreColor(),
                                         areaColorProperty_.getOgreColor(),
                                         parkingColorProperty_.getOgreColor()};
@@ -282,6 +298,9 @@ void LaneletMapPlugin::visibilityPropertyChanged() {
             }
             if (!parkingVisibilityProperty_.getBool()) {
                 mapElement_->disable(ObjectClassification::PARKINGAREA);
+            }
+            if (!trafficLightVisibilityProperty_.getBool()) {
+                mapElement_->disable(ObjectClassification::TRAFFICLIGHT);
             }
             if (!seperatorVisibilityProperty_.getBool()) {
                 mapElement_->disable(ObjectClassification::SEPERATOR);
