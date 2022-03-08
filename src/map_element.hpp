@@ -49,6 +49,7 @@
 
 #include <lanelet2_io/Io.h>
 #include <lanelet2_projection/UTM.h>
+#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
 
@@ -66,14 +67,16 @@ struct VisualizationOptions {
     bool fillParking = true;
     double areaWidth = {0.3};
     double parkingWidth = {0.3};
+    double trafficLightHeightAboveGround = {3.0};
     double seperatorWidth = {0.5};
     double stopLineWidth = {0.5};
-    Ogre::ColourValue colorLeft{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};      // gray
-    Ogre::ColourValue colorRight{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};     // gray
-    Ogre::ColourValue colorStopLine{Ogre::ColourValue(1.0, 0.1, 0.1, 1.0)};  // red
-    Ogre::ColourValue colorSeperator{Ogre::ColourValue(0.1, 0.1, 0.9, 0.8)}; // blue
-    Ogre::ColourValue colorArea{Ogre::ColourValue(0.9, 0.5, 0.1, 0.6)};      // orange
-    Ogre::ColourValue colorParking{Ogre::ColourValue(0.0, 0.7, 0.3, 0.8)};   // green
+    Ogre::ColourValue colorLeft{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};         // gray
+    Ogre::ColourValue colorRight{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)};        // gray
+    Ogre::ColourValue colorStopLine{Ogre::ColourValue(1.0, 0.1, 0.1, 1.0)};     // red
+    Ogre::ColourValue colorTrafficLight{Ogre::ColourValue(0.4, 0.4, 0.4, 0.8)}; // gray
+    Ogre::ColourValue colorSeperator{Ogre::ColourValue(0.1, 0.1, 0.9, 0.8)};    // blue
+    Ogre::ColourValue colorArea{Ogre::ColourValue(0.9, 0.5, 0.1, 0.6)};         // orange
+    Ogre::ColourValue colorParking{Ogre::ColourValue(0.0, 0.7, 0.3, 0.8)};      // green
 };
 
 enum ObjectClassification {
@@ -85,13 +88,14 @@ enum ObjectClassification {
     SEPERATOR,
     REGULATORYELEMENT,
     STOPLINE,
+    TRAFFICLIGHT,
     SPEEDLIMIT
 };
 // List of possible Object Classifications
 static const ObjectClassification regElementClassifications[] = {
-    REGULATORYELEMENT, STOPLINE, SPEEDLIMIT}; // List of Classifications that
-                                              // are associated with regulatory
-                                              // Elements
+    REGULATORYELEMENT, STOPLINE, TRAFFICLIGHT, SPEEDLIMIT}; // List of Classifications that
+                                                            // are associated with regulatory
+                                                            // Elements
 using ClassifiedMovableObject = std::pair<ObjectClassification, Ogre::MovableObject*>;
 
 static int manObjCounter{0};
@@ -122,12 +126,16 @@ private:
     void attachLaneletIdToSceneNode(const lanelet::ConstLanelet& lanelet, Ogre::SceneNode* parentNode);
     void attachAreaToSceneNode(const lanelet::ConstArea& area, Ogre::SceneNode* parentNode);
     void addRegulatoryElements(const lanelet::ConstLanelet& lanelet, Ogre::SceneNode* parentNode);
+    void attachTrafficLightsToSceneNode(std::vector<lanelet::ConstPolygon3d>& trafficLights,
+                                        Ogre::SceneNode* parentNode);
 
 
     ogre_helper::Line ogreLineFromLLetLineString(const lanelet::ConstLineString3d& lineString) const;
-    ogre_helper::Line ogreLineFromLLetPolygon(const lanelet::CompoundPolygon3d& lineString) const;
+    ogre_helper::Line ogreLineFromLLetPolygon(const lanelet::CompoundPolygon3d& polygon) const;
+    ogre_helper::Line ogreLineFromLLetTrafficLight(const lanelet::ConstPolygon3d& polygon3d) const;
     ogre_helper::Line ogreLineFromLLetPts(const lanelet::ConstPoints3d& ptsVector) const;
     Ogre::Vector3 ogreVec3FromLLetPoint(const lanelet::ConstPoint3d point) const;
+    Ogre::Vector3 ogreVec3FromLLetTrafficLight(const lanelet::ConstPoint3d point, const double zOffset = 0) const;
 
     std::vector<ClassifiedMovableObject> objects_;
     Ogre::SceneManager* sceneManager_;

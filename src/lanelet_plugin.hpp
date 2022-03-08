@@ -88,6 +88,7 @@ private:
     rviz::BoolProperty idVisibilityProperty_;
     rviz::BoolProperty areaVisibilityProperty_;
     rviz::BoolProperty parkingVisibilityProperty_;
+    rviz::BoolProperty trafficLightVisibilityProperty_;
     rviz::BoolProperty areaFillProperty_;
     rviz::BoolProperty parkingFillProperty_;
     rviz::BoolProperty seperatorVisibilityProperty_;
@@ -96,11 +97,13 @@ private:
     rviz::FloatProperty laneletWidthProperty_;
     rviz::FloatProperty areaWidthProperty_;
     rviz::FloatProperty parkingWidthProperty_;
+    rviz::FloatProperty trafficLightHeightAboveGroundProperty_;
     rviz::FloatProperty seperatorWidthProperty_;
     rviz::FloatProperty stopLineWidthProperty_;
     rviz::ColorProperty laneletLeftBoundColorProperty_;
     rviz::ColorProperty laneletRightBoundColorProperty_;
     rviz::ColorProperty stopLineColorProperty_;
+    rviz::ColorProperty trafficLightColorProperty_;
     rviz::ColorProperty seperatorColorProperty_;
     rviz::ColorProperty areaColorProperty_;
     rviz::ColorProperty parkingColorProperty_;
